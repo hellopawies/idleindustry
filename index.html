@@ -117,9 +117,9 @@
   /* ── Login stats bar ── */
   #login-stats {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
-    width: 360px;
+    width: 440px;
     max-width: 100%;
     position: relative;
     z-index: 1;
@@ -600,8 +600,8 @@
     /* ── Offline toast ── */
     #offline-toast { flex-wrap: wrap; gap: 8px; }
 
-    /* ── Login stats: 2×2 grid ── */
-    #login-stats   { grid-template-columns: repeat(2, 1fr); width: 100%; max-width: 420px; }
+    /* ── Login stats: 3+2 grid on mobile ── */
+    #login-stats   { grid-template-columns: repeat(3, 1fr); width: 100%; max-width: 420px; }
     .ls-label      { font-size: 0.65rem; }
 
     /* ── Modals: full viewport width ── */
@@ -682,12 +682,12 @@
 <!-- ── Auth screen ── -->
 <div id="auth-screen">
   <div id="auth-card">
-    <div class="logo">Idle <span>Industry</span><button class="version-tag" onclick="openChangelog()" style="vertical-align:middle;margin-left:6px;">v0.7.0</button></div>
+    <div class="logo">Idle <span>Industry</span><span class="version-tag" style="vertical-align:middle;margin-left:6px;cursor:default;pointer-events:none;">v0.8.0</span></div>
     <div class="tagline">Build your empire. No email required.</div>
     <div id="auth-title">Sign in</div>
     <div class="field">
       <label>Username</label>
-      <input type="text" id="auth-username" placeholder="your_username"
+      <input type="text" id="auth-username" placeholder="Username"
              autocomplete="username" maxlength="20" spellcheck="false">
     </div>
     <div class="field">
@@ -717,6 +717,10 @@
       <div class="ls-label">Idle Cap</div>
       <div class="ls-value" id="ls-idle">—</div>
     </div>
+    <div class="ls-item">
+      <div class="ls-label">Idle Bonus</div>
+      <div class="ls-value" id="ls-idle-mult">—</div>
+    </div>
   </div>
 </div>
 
@@ -730,7 +734,7 @@
     </div>
   </div>
   <div id="header">
-    <h1>Idle <span>Industry</span><button class="version-tag" onclick="openChangelog()">v0.7.0</button></h1>
+    <h1>Idle <span>Industry</span><button class="version-tag" onclick="openChangelog()">v0.8.0</button></h1>
     <div id="stats">
       <div id="money-display">$0.00</div>
       <div id="income-display">$0.00 / sec</div>
@@ -766,7 +770,7 @@
 <div id="admin-screen">
   <div id="admin-header">
     <div class="admin-brand">
-      Idle Industry <span class="badge">Admin</span><button class="version-tag" onclick="openChangelog()" style="margin-left:10px;">v0.7.0</button>
+      Idle Industry <span class="badge">Admin</span><button class="version-tag" onclick="openChangelog()" style="margin-left:10px;">v0.8.0</button>
     </div>
     <div id="admin-user-area">
       <span id="admin-username-display"></span>
@@ -800,6 +804,10 @@
         <div class="ef">
           <label>Starting Money for New Players ($)</label>
           <input type="number" id="cfg-starting-money" step="1" min="0" placeholder="10">
+        </div>
+        <div class="ef">
+          <label>Idle Income Multiplier (offline earnings ×)</label>
+          <input type="number" id="cfg-idle-multiplier" step="0.1" min="0.1" max="100" placeholder="1.0">
         </div>
       </div>
       <div class="action-bar">
@@ -942,8 +950,9 @@ const DEFAULT_INDUSTRIES = [
   { id: 14, name: "Time Forge",        emoji: "⏳", baseCost: 1_000_000_000_000_000, baseIncome: 6_500_000_000   },
   { id: 15, name: "Entropy Vault",     emoji: "🌀", baseCost: 10_000_000_000_000_000,baseIncome: 36_000_000_000  },
 ];
-const DEFAULT_COST_SCALE    = 1.15;
-const DEFAULT_MAX_OFFLINE_H = 2;
+const DEFAULT_COST_SCALE      = 1.15;
+const DEFAULT_MAX_OFFLINE_H   = 2;
+const DEFAULT_IDLE_MULTIPLIER = 1.0;
 
 const DEFAULT_RANKS = [
   { id: 0, name: "Intern",    emoji: "🪪", incomeBonus: 0,    offlineBonus: 0   },
@@ -957,9 +966,10 @@ const DEFAULT_RANKS = [
 // ─── Live config (overwritten from DB) ────────────────────
 let INDUSTRIES     = DEFAULT_INDUSTRIES.map(x => ({ ...x }));
 let RANKS          = DEFAULT_RANKS.map(x => ({ ...x }));
-let COST_SCALE     = DEFAULT_COST_SCALE;
-let MAX_OFFLINE    = DEFAULT_MAX_OFFLINE_H * 3600;
-let STARTING_MONEY = 10;
+let COST_SCALE       = DEFAULT_COST_SCALE;
+let MAX_OFFLINE      = DEFAULT_MAX_OFFLINE_H * 3600;
+let IDLE_MULTIPLIER  = DEFAULT_IDLE_MULTIPLIER;
+let STARTING_MONEY   = 10;
 let GAME_EVENTS    = [];  // array of { id, name, incomeBonus, startTime, endTime, motd }
 const SESSION_KEY = "idi_session";
 
@@ -1003,17 +1013,25 @@ async function loadGameConfig() {
 
 function applyGameConfig(cfg) {
   if (cfg.industries && Array.isArray(cfg.industries)) {
-    INDUSTRIES = cfg.industries.map((ind, i) => ({
-      id:         ind.id   ?? i,
-      name:       ind.name       || DEFAULT_INDUSTRIES[i]?.name   || `Industry ${i}`,
-      emoji:      ind.emoji      || DEFAULT_INDUSTRIES[i]?.emoji  || "🏭",
-      baseCost:   Number(ind.baseCost)   || DEFAULT_INDUSTRIES[i]?.baseCost   || 100,
-      baseIncome: Number(ind.baseIncome) || DEFAULT_INDUSTRIES[i]?.baseIncome || 1,
-    }));
+    // Merge server list with defaults so new buildings added client-side always appear
+    const len = Math.max(cfg.industries.length, DEFAULT_INDUSTRIES.length);
+    INDUSTRIES = Array.from({ length: len }, (_, i) => {
+      const ind = cfg.industries[i];
+      const def = DEFAULT_INDUSTRIES[i];
+      if (!ind) return { ...def };
+      return {
+        id:         ind.id   ?? i,
+        name:       ind.name       || def?.name   || `Industry ${i}`,
+        emoji:      ind.emoji      || def?.emoji  || "🏭",
+        baseCost:   Number(ind.baseCost)   || def?.baseCost   || 100,
+        baseIncome: Number(ind.baseIncome) || def?.baseIncome || 1,
+      };
+    });
   }
-  if (cfg.costScale)             COST_SCALE     = Number(cfg.costScale);
-  if (cfg.maxOfflineHours)       MAX_OFFLINE    = Number(cfg.maxOfflineHours) * 3600;
-  if (cfg.startingMoney != null) STARTING_MONEY = Number(cfg.startingMoney);
+  if (cfg.costScale)              COST_SCALE      = Number(cfg.costScale);
+  if (cfg.maxOfflineHours)        MAX_OFFLINE     = Number(cfg.maxOfflineHours) * 3600;
+  if (cfg.idleMultiplier != null) IDLE_MULTIPLIER = Number(cfg.idleMultiplier);
+  if (cfg.startingMoney  != null) STARTING_MONEY  = Number(cfg.startingMoney);
   if (Array.isArray(cfg.events)) {
     GAME_EVENTS = cfg.events.map((ev, i) => ({
       id:          i,
@@ -1182,7 +1200,7 @@ function saveGame() { writeCache(); saveCloud(); }
 function applyIdleProgress(silent = false) {
   const elapsed = Math.min((now() - state.lastSave) / 1000, getRankOfflineCap());
   if (elapsed < 2 || totalIncome() === 0) return;
-  const earned = totalIncome() * elapsed;
+  const earned = totalIncome() * elapsed * IDLE_MULTIPLIER;
   state.money += earned;
   state.lastSave = now();
   if (!silent && elapsed >= 10) {
@@ -1235,14 +1253,16 @@ async function startLoginStats() {
   // Populate game config stats
   document.getElementById("ls-multiplier").textContent = COST_SCALE + "×";
   document.getElementById("ls-idle").textContent       = (MAX_OFFLINE / 3600).toFixed(1) + "h";
+  document.getElementById("ls-idle-mult").textContent  = IDLE_MULTIPLIER + "×";
 
   // Fetch live player count
   const { data } = await sb.rpc("get_public_stats");
   if (data) {
     const el = document.getElementById("ls-accounts");
     if (el) el.textContent = data.player_count ?? "—";
-    if (data.cost_scale)       { document.getElementById("ls-multiplier").textContent = data.cost_scale + "×"; }
-    if (data.max_offline_hours){ document.getElementById("ls-idle").textContent       = data.max_offline_hours + "h"; }
+    if (data.cost_scale)        { document.getElementById("ls-multiplier").textContent = data.cost_scale + "×"; }
+    if (data.max_offline_hours) { document.getElementById("ls-idle").textContent       = data.max_offline_hours + "h"; }
+    if (data.idle_multiplier)   { document.getElementById("ls-idle-mult").textContent  = data.idle_multiplier + "×"; }
   }
 }
 
@@ -1699,12 +1719,14 @@ async function renderIndustryEditor() {
   if (data) applyGameConfig(data);
 
   const cfg  = data || {};
-  const scale = cfg.costScale       || COST_SCALE;
-  const maxH  = cfg.maxOfflineHours || (MAX_OFFLINE / 3600);
+  const scale      = cfg.costScale       || COST_SCALE;
+  const maxH       = cfg.maxOfflineHours || (MAX_OFFLINE / 3600);
+  const idleMult   = cfg.idleMultiplier  ?? IDLE_MULTIPLIER;
 
-  document.getElementById("cfg-cost-scale").value     = scale;
-  document.getElementById("cfg-max-offline").value    = maxH;
-  document.getElementById("cfg-starting-money").value = cfg.startingMoney ?? STARTING_MONEY;
+  document.getElementById("cfg-cost-scale").value      = scale;
+  document.getElementById("cfg-max-offline").value     = maxH;
+  document.getElementById("cfg-starting-money").value  = cfg.startingMoney ?? STARTING_MONEY;
+  document.getElementById("cfg-idle-multiplier").value = idleMult;
 
   editorInds = INDUSTRIES.map(x => ({ ...x }));
   renderEditorRows();
@@ -1720,13 +1742,14 @@ document.getElementById("cfg-save-btn").addEventListener("click", async () => {
   statusEl.textContent = "Saving…";
 
   const industries      = getEditorValues();
-  const costScale       = parseFloat(document.getElementById("cfg-cost-scale").value)     || DEFAULT_COST_SCALE;
-  const maxOfflineHours = parseFloat(document.getElementById("cfg-max-offline").value)    || DEFAULT_MAX_OFFLINE_H;
-  const startingMoney   = parseFloat(document.getElementById("cfg-starting-money").value) || 10;
+  const costScale       = parseFloat(document.getElementById("cfg-cost-scale").value)       || DEFAULT_COST_SCALE;
+  const maxOfflineHours = parseFloat(document.getElementById("cfg-max-offline").value)      || DEFAULT_MAX_OFFLINE_H;
+  const startingMoney   = parseFloat(document.getElementById("cfg-starting-money").value)   || 10;
+  const idleMultiplier  = parseFloat(document.getElementById("cfg-idle-multiplier").value)  || DEFAULT_IDLE_MULTIPLIER;
 
   // Fetch current config first so we don't wipe ranks / events / other fields
   const { data: cfgData } = await sb.rpc("get_game_config");
-  const newCfg = { ...(cfgData || {}), industries, costScale, maxOfflineHours, startingMoney };
+  const newCfg = { ...(cfgData || {}), industries, costScale, maxOfflineHours, startingMoney, idleMultiplier };
 
   const { data, error } = await sb.rpc("set_game_config", {
     p_user_id: currentUserId,
@@ -1757,6 +1780,7 @@ document.getElementById("cfg-reset-btn").addEventListener("click", async () => {
     industries:      DEFAULT_INDUSTRIES.map(x => ({ ...x })),
     costScale:       DEFAULT_COST_SCALE,
     maxOfflineHours: DEFAULT_MAX_OFFLINE_H,
+    idleMultiplier:  DEFAULT_IDLE_MULTIPLIER,
   };
 
   const { data, error } = await sb.rpc("set_game_config", {
@@ -2359,6 +2383,17 @@ function selectEmoji(emoji) {
 // ════════════════════════════════════════════════════════════
 const CHANGELOG = [
   {
+    version: "v0.8.0",
+    date: "2026-03-23",
+    changes: [
+      "Version tag on login screen is now a label (not a button)",
+      "Username placeholder changed from 'your_username' to 'Username'",
+      "Admin can now set a global Idle Income Multiplier — scales how much players earn while offline",
+      "Login stats now shows the Idle Bonus multiplier",
+      "New buildings from v0.7.0 now always appear even if the server config predates them",
+    ],
+  },
+  {
     version: "v0.7.0",
     date: "2026-03-23",
     changes: [
@@ -2666,7 +2701,8 @@ init();
      RETURN jsonb_build_object(
        'player_count',      v_count,
        'cost_scale',        COALESCE((v_cfg->>'costScale')::float,        1.15),
-       'max_offline_hours', COALESCE((v_cfg->>'maxOfflineHours')::float,  2)
+       'max_offline_hours', COALESCE((v_cfg->>'maxOfflineHours')::float,  2),
+       'idle_multiplier',   COALESCE((v_cfg->>'idleMultiplier')::float,   1.0)
      );
    END;$$;
    GRANT EXECUTE ON FUNCTION public.get_public_stats() TO anon, authenticated;
