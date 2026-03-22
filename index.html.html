@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Idle Industry</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22223a;
+    --accent: #6c63ff;
+    --accent-hover: #857df8;
+    --accent-disabled: #3a3760;
+    --text: #e8e8f0;
+    --muted: #888899;
+    --green: #4caf8a;
+    --yellow: #f0c040;
+    --red: #e05070;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ── Auth screen ── */
+  #auth-screen {
+    display: none;
+    min-height: 100vh;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    gap: 20px;
+    position: relative;
+  }
+  #auth-screen.visible { display: flex; }
+
+  #bg-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #auth-card {
+    background: var(--surface);
+    border: 1px solid #2a2a3e;
+    border-radius: 16px;
+    padding: 36px 32px;
+    width: 360px;
+    max-width: 100%;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    position: relative;
+    z-index: 1;
+  }
+
+  #auth-card .logo { font-size: 1.5rem; font-weight: 700; color: var(--accent-hover); margin-bottom: 6px; }
+  #auth-card .logo span { color: var(--text); }
+  #auth-card .tagline { font-size: 0.82rem; color: var(--muted); margin-bottom: 28px; }
+  #auth-title { font-size: 1rem; font-weight: 600; margin-bottom: 18px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; }
+  .field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid #3a3a5e;
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--accent); }
+
+  #auth-error { font-size: 0.8rem; margin-bottom: 14px; min-height: 18px; }
+  #auth-error.err { color: var(--red); }
+  #auth-error.ok  { color: var(--green); }
+
+  #auth-submit {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 11px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 14px;
+  }
+  #auth-submit:hover    { background: var(--accent-hover); }
+  #auth-submit:disabled { background: var(--accent-disabled); cursor: not-allowed; }
+
+  #auth-toggle { text-align: center; font-size: 0.82rem; color: var(--muted); }
+  #auth-toggle a { color: var(--accent-hover); cursor: pointer; text-decoration: underline; }
+
+  /* ── Game screen ── */
+  #game-screen { display: none; position: relative; z-index: 1; }
+  #game-screen.visible { display: block; }
+
+  /* ── Login stats bar ── */
+  #login-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 360px;
+    max-width: 100%;
+    position: relative;
+    z-index: 1;
+  }
+  .ls-item {
+    background: rgba(22,22,34,0.85); backdrop-filter: blur(8px);
+    border: 1px solid #2a2a3e; border-radius: 10px;
+    padding: 9px 8px; text-align: center;
+  }
+  .ls-label {
+    font-size: 0.58rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 4px;
+  }
+  .ls-value {
+    font-size: 0.88rem; font-weight: 700; color: var(--yellow);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+
+  /* ── Header ── */
+  #header {
+    position: sticky; top: 0;
+    background: var(--surface);
+    border-bottom: 1px solid #2a2a3e;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    gap: 12px;
+  }
+  #header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.03em; color: var(--accent-hover); white-space: nowrap; }
+  #header h1 span { color: var(--text); }
+
+  #stats { text-align: center; flex: 1; }
+  #money-display  { font-size: 1.4rem; font-weight: 700; color: var(--yellow); }
+  #income-display { font-size: 0.78rem; color: var(--green); margin-top: 1px; }
+
+  #auth-area { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  #username-display { font-size: 0.8rem; color: var(--accent-hover); font-weight: 600; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .sync-dot.syncing { background: var(--yellow); animation: pulse 1s infinite; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .hdr-btn {
+    background: var(--surface2); border: 1px solid #3a3a5e;
+    color: var(--text); border-radius: 7px; padding: 6px 12px;
+    font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .hdr-btn:hover        { background: #2e2e48; border-color: var(--accent); }
+  .hdr-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Main ── */
+  #main { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  #offline-toast {
+    background: var(--surface2); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 12px;
+    display: flex; justify-content: space-between; align-items: center;
+    animation: fadeIn 0.3s ease;
+  }
+  #offline-toast p { font-size: 0.9rem; color: var(--green); }
+  #offline-toast button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0 4px; }
+  #offline-toast button:hover { color: var(--text); }
+
+  #industry-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .card {
+    background: var(--surface); border: 1px solid #2a2a3e;
+    border-radius: 12px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 14px;
+    transition: opacity 0.2s, border-color 0.2s;
+  }
+  .card.locked     { opacity: 0.45; }
+  .card.affordable { border-color: #3a3a5e; }
+
+  .card-emoji  { font-size: 2rem; width: 48px; text-align: center; flex-shrink: 0; }
+  .card-info   { flex: 1; min-width: 0; }
+  .card-name   { font-weight: 600; font-size: 1rem; margin-bottom: 3px; }
+  .card-income { font-size: 0.78rem; color: var(--green); margin-bottom: 2px; }
+  .card-cost   { font-size: 0.78rem; color: var(--muted); }
+
+  .card-right { display: flex; flex-direction: column; align-items: center; gap: 6px; flex-shrink: 0; }
+  .owned-badge {
+    background: var(--surface2); border-radius: 20px; padding: 2px 10px;
+    font-size: 0.8rem; font-weight: 700; color: var(--accent-hover);
+    min-width: 40px; text-align: center;
+  }
+  .buy-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 18px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, transform 0.1s; white-space: nowrap;
+  }
+  .buy-btn:hover:not(:disabled)  { background: var(--accent-hover); transform: translateY(-1px); }
+  .buy-btn:active:not(:disabled) { transform: translateY(0); }
+  .buy-btn:disabled { background: var(--accent-disabled); color: var(--muted); cursor: not-allowed; }
+
+  .section-label {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 8px; margin-top: 4px;
+  }
+
+  #footer {
+    text-align: center; padding: 12px; position: fixed; bottom: 0;
+    width: 100%; background: var(--bg); border-top: 1px solid #1e1e2e;
+  }
+  #reset-btn {
+    background: none; border: 1px solid #3a3a4e; color: var(--muted);
+    border-radius: 6px; padding: 5px 14px; font-size: 0.75rem; cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  #reset-btn:hover { color: var(--red); border-color: var(--red); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     ADMIN SCREEN
+  ════════════════════════════════════════════════════════════ */
+  #admin-screen { display: none; min-height: 100vh; position: relative; z-index: 1; }
+  #admin-screen.visible { display: block; }
+
+  #admin-header {
+    position: sticky; top: 0; z-index: 100;
+    background: #13131d;
+    border-bottom: 2px solid var(--yellow);
+    padding: 12px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+  }
+  .admin-brand { font-size: 1.15rem; font-weight: 700; color: var(--yellow); letter-spacing: 0.04em; }
+  .admin-brand .badge {
+    background: var(--yellow); color: #13131d;
+    font-size: 0.65rem; font-weight: 800; padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-left: 8px; vertical-align: middle;
+  }
+  #admin-user-area { display: flex; align-items: center; gap: 10px; }
+  #admin-username-display { font-size: 0.82rem; color: var(--muted); }
+
+  #admin-nav {
+    background: var(--surface);
+    border-bottom: 1px solid #2a2a3e;
+    display: flex; gap: 0; padding: 0 24px;
+  }
+  .tab-btn {
+    background: none; border: none; border-bottom: 3px solid transparent;
+    color: var(--muted); padding: 12px 22px;
+    font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    transition: color 0.15s, border-color 0.15s; white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--yellow); border-bottom-color: var(--yellow); }
+
+  #admin-body { max-width: 980px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .panel-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+  .panel-sub   { font-size: 0.8rem; color: var(--muted); margin-bottom: 22px; }
+
+  /* Industry editor rows */
+  .ind-editor-row {
+    background: var(--surface); border: 1px solid #2a2a3e; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 8px;
+    display: grid; gap: 10px; align-items: end;
+    grid-template-columns: 44px 1fr 68px 120px 120px 34px;
+  }
+  .ind-editor-row .ef { display: flex; flex-direction: column; gap: 4px; }
+  .ind-editor-row .ef label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ind-editor-row .ef input {
+    background: var(--surface2); border: 1px solid #3a3a5e; border-radius: 7px;
+    color: var(--text); padding: 8px 10px; font-size: 0.88rem; outline: none;
+    transition: border-color 0.15s; width: 100%;
+  }
+  .ind-editor-row .ef input:focus { border-color: var(--yellow); }
+  .ind-row-num {
+    font-size: 0.75rem; color: var(--muted); text-align: center;
+    background: var(--surface2); border-radius: 6px; padding: 4px 0;
+  }
+  .ie-del-btn {
+    background: none; color: var(--muted); border: 1px solid #3a3a5e;
+    border-radius: 6px; width: 34px; height: 34px; cursor: pointer;
+    font-size: 0.85rem; transition: color 0.15s, border-color 0.15s;
+    display: flex; align-items: center; justify-content: center; padding: 0;
+  }
+  .ie-del-btn:hover:not(:disabled) { color: var(--red); border-color: var(--red); }
+  .ie-del-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+  .global-cfg {
+    background: var(--surface); border: 1px solid #2a2a3e; border-radius: 10px;
+    padding: 18px; margin-top: 16px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  .global-cfg .ef { display: flex; flex-direction: column; gap: 4px; }
+  .global-cfg .ef label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .global-cfg .ef input {
+    background: var(--surface2); border: 1px solid #3a3a5e; border-radius: 7px;
+    color: var(--text); padding: 9px 12px; font-size: 0.9rem; outline: none;
+    transition: border-color 0.15s; width: 100%;
+  }
+  .global-cfg .ef input:focus { border-color: var(--yellow); }
+
+  .action-bar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-top: 20px; }
+  .status-msg { font-size: 0.82rem; }
+  .status-msg.ok  { color: var(--green); }
+  .status-msg.err { color: var(--red); }
+
+  .btn-primary {
+    background: var(--yellow); color: #13131d; border: none; border-radius: 8px;
+    padding: 10px 24px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface2); color: var(--text); border: 1px solid #3a3a5e;
+    border-radius: 8px; padding: 10px 18px; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .btn-secondary:hover { border-color: var(--accent); }
+
+  /* Users table */
+  .tbl-wrap { overflow-x: auto; margin-top: 6px; }
+  table.users-tbl { width: 100%; border-collapse: collapse; }
+  table.users-tbl th {
+    text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); padding: 8px 14px; border-bottom: 1px solid #2a2a3e;
+  }
+  table.users-tbl td { padding: 11px 14px; font-size: 0.88rem; border-bottom: 1px solid #1e1e2e; }
+  table.users-tbl tr:hover td { background: var(--surface); }
+  table.users-tbl .money-cell { color: var(--yellow); font-weight: 600; }
+  table.users-tbl .time-cell  { color: var(--muted); font-size: 0.8rem; }
+
+  .btn-del {
+    background: none; color: var(--red); border: 1px solid var(--red);
+    border-radius: 6px; padding: 4px 12px; font-size: 0.78rem; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-del:hover { background: rgba(224,80,112,0.12); }
+
+  .tbl-toolbar {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+  }
+  .tbl-count { font-size: 0.82rem; color: var(--muted); }
+  .btn-refresh {
+    background: var(--surface2); color: var(--text); border: 1px solid #3a3a5e;
+    border-radius: 7px; padding: 7px 14px; font-size: 0.82rem; cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .btn-refresh:hover { border-color: var(--accent); }
+  .empty-state { text-align: center; color: var(--muted); padding: 40px; font-size: 0.9rem; }
+
+  /* Reset password modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200;
+    display: none; justify-content: center; align-items: center;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid #3a3a5e; border-radius: 14px;
+    padding: 28px 28px 22px; width: 380px; max-width: calc(100vw - 32px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+  }
+  .modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+  /* Rank badge in game header */
+  .rank-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    background: var(--surface2); border: 1px solid #3a3a5e;
+    border-radius: 20px; padding: 2px 9px;
+    font-size: 0.73rem; font-weight: 700; color: var(--yellow);
+    white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* Rank editor rows — matches industry editor styling */
+  .rank-editor-row {
+    background: var(--surface); border: 1px solid #2a2a3e; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 8px;
+    display: grid; gap: 10px; align-items: end;
+    grid-template-columns: 44px 1fr 68px 130px 140px 34px;
+  }
+  .rank-editor-row .ef { display: flex; flex-direction: column; gap: 4px; }
+  .rank-editor-row .ef label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .rank-editor-row .ef input {
+    background: var(--surface2); border: 1px solid #3a3a5e; border-radius: 7px;
+    color: var(--text); padding: 8px 10px; font-size: 0.88rem; outline: none;
+    transition: border-color 0.15s; width: 100%;
+  }
+  .rank-editor-row .ef input:focus { border-color: var(--yellow); }
+
+  /* Emoji picker button (shared between industry + rank editors) */
+  .emoji-btn {
+    background: var(--surface2); border: 1px solid #3a3a5e; border-radius: 7px;
+    color: var(--text); padding: 8px 10px; font-size: 1.05rem; cursor: pointer;
+    width: 100%; transition: border-color 0.15s;
+    display: flex; align-items: center; gap: 5px; line-height: 1;
+  }
+  .emoji-btn:hover, .emoji-btn.ep-active { border-color: var(--yellow); }
+  .emoji-btn .ep-arrow { font-size: 0.55rem; color: var(--muted); margin-left: auto; }
+
+  /* Emoji picker panel */
+  #emoji-picker-panel {
+    position: fixed; z-index: 999;
+    background: var(--surface); border: 1px solid #3a3a5e; border-radius: 12px;
+    padding: 8px; width: 272px;
+    box-shadow: 0 10px 36px rgba(0,0,0,0.65);
+    max-height: 270px; overflow-y: auto;
+  }
+  .ep-cat-label {
+    font-size: 0.64rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.07em; padding: 5px 3px 2px; display: block;
+  }
+  .ep-cat-grid {
+    display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; margin-bottom: 2px;
+  }
+  .ep-item {
+    background: none; border: none; font-size: 1.2rem; cursor: pointer;
+    padding: 4px 0; border-radius: 5px; transition: background 0.1s;
+    line-height: 1.3; text-align: center;
+  }
+  .ep-item:hover { background: var(--surface2); }
+
+  /* MOTD / Announcement banner (in-game) */
+  #motd-banner {
+    background: linear-gradient(135deg, rgba(108,99,255,0.13), rgba(76,175,138,0.08));
+    border-bottom: 1px solid rgba(108,99,255,0.25);
+    padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    font-size: 0.87rem; color: var(--text); position: relative; z-index: 1;
+  }
+  #motd-banner .motd-text { flex: 1; }
+  #motd-banner .motd-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  #motd-banner .motd-dismiss {
+    background: none; border: 1px solid rgba(108,99,255,0.3); border-radius: 5px;
+    color: var(--muted); cursor: pointer; font-size: 0.72rem; padding: 3px 8px;
+    transition: color 0.15s, border-color 0.15s; white-space: nowrap; font-family: inherit;
+  }
+  #motd-banner .motd-dismiss:hover { color: var(--accent-hover); border-color: var(--accent); }
+  #motd-banner .motd-close {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 1rem; padding: 0 4px; flex-shrink: 0; transition: color 0.15s;
+  }
+  #motd-banner .motd-close:hover { color: var(--text); }
+
+  /* Event editor rows */
+  .event-editor-row {
+    background: var(--surface); border: 1px solid #2a2a3e; border-radius: 10px;
+    padding: 14px 16px; margin-bottom: 10px;
+  }
+  .event-editor-top {
+    display: grid; gap: 10px; align-items: end; margin-bottom: 10px;
+    grid-template-columns: 1fr 90px 190px 190px 34px;
+  }
+  .event-editor-row .ef { display: flex; flex-direction: column; gap: 4px; }
+  .event-editor-row .ef label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .event-editor-row .ef input {
+    background: var(--surface2); border: 1px solid #3a3a5e; border-radius: 7px;
+    color: var(--text); padding: 8px 10px; font-size: 0.88rem; outline: none;
+    transition: border-color 0.15s; width: 100%;
+  }
+  .event-editor-row .ef input:focus { border-color: var(--yellow); }
+  .ev-status-badge {
+    font-size: 0.68rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; margin-left: 6px; vertical-align: middle;
+  }
+  .ev-status-badge.active    { color: var(--green);  background: rgba(76,175,138,0.12); border: 1px solid rgba(76,175,138,0.3); }
+  .ev-status-badge.scheduled { color: var(--yellow); background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.3); }
+  .ev-status-badge.expired   { color: var(--muted);  background: rgba(100,100,120,0.10); border: 1px solid rgba(100,100,120,0.25); }
+
+  /* Admin badge in accounts table */
+  .admin-badge {
+    font-size: 0.62rem; font-weight: 800; color: #13131d;
+    background: var(--yellow); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  }
+
+  /* Event bonus pill in income display */
+  .event-pill {
+    display: inline-block; font-size: 0.68rem; font-weight: 700;
+    background: rgba(240,192,64,0.15); border: 1px solid rgba(240,192,64,0.35);
+    color: var(--yellow); border-radius: 4px; padding: 1px 5px; margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* Version tag (clickable, opens changelog) */
+  .version-tag {
+    background: none; border: 1px solid #3a3a5e; border-radius: 5px;
+    color: var(--muted); font-size: 0.62rem; font-weight: 700; padding: 2px 7px;
+    cursor: pointer; vertical-align: middle; margin-left: 7px;
+    transition: border-color 0.15s, color 0.15s; font-family: inherit; letter-spacing: 0.04em;
+  }
+  .version-tag:hover { border-color: var(--accent); color: var(--accent-hover); }
+
+  /* Leaderboard table */
+  #leaderboard-modal .modal-box { width: 480px; }
+  .lb-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .lb-table th {
+    text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); padding: 7px 10px; border-bottom: 1px solid #2a2a3e;
+  }
+  .lb-table td { padding: 9px 10px; font-size: 0.87rem; border-bottom: 1px solid #1e1e2e; }
+  .lb-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .lb-table tr.lb-you td { background: rgba(108,99,255,0.08); }
+  .lb-you-tag {
+    font-size: 0.65rem; font-weight: 700; color: var(--accent-hover);
+    background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.3);
+    border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  }
+  .lb-not-ranked { font-size: 0.8rem; color: var(--muted); text-align: center; padding: 10px 0 2px; border-top: 1px solid #2a2a3e; margin-top: 6px; }
+  .lb-table .lb-pos { color: var(--muted); font-size: 0.82rem; width: 32px; text-align: center; }
+  .lb-table .lb-money { color: var(--yellow); font-weight: 700; text-align: right; }
+  .lb-empty { text-align: center; color: var(--muted); padding: 36px; font-size: 0.88rem; }
+
+  /* Changelog */
+  #changelog-modal .modal-box { width: 440px; max-height: 80vh; overflow-y: auto; }
+  .cl-entry { margin-bottom: 20px; }
+  .cl-entry:last-child { margin-bottom: 4px; }
+  .cl-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .cl-ver-tag {
+    font-size: 0.75rem; font-weight: 800; color: var(--accent-hover);
+    background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.28);
+    border-radius: 5px; padding: 2px 8px; flex-shrink: 0;
+  }
+  .cl-date { font-size: 0.72rem; color: var(--muted); }
+  .cl-items { list-style: none; padding: 0; margin: 0; }
+  .cl-items li {
+    font-size: 0.83rem; color: var(--text); padding: 4px 0 4px 16px;
+    position: relative; border-bottom: 1px solid rgba(42,42,62,0.4);
+  }
+  .cl-items li:last-child { border-bottom: none; }
+  .cl-items li::before { content: "▸"; position: absolute; left: 2px; color: var(--accent-hover); font-size: 0.7rem; top: 5px; }
+
+  /* Rank select in accounts table */
+  .rank-select {
+    background: var(--surface2); border: 1px solid #3a3a5e; border-radius: 6px;
+    color: var(--text); padding: 4px 8px; font-size: 0.8rem; cursor: pointer;
+    outline: none; transition: border-color 0.15s; max-width: 140px;
+  }
+  .rank-select:focus { border-color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<!-- Global animated background (fixed, behind all screens) -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- ── Auth screen ── -->
+<div id="auth-screen">
+  <div id="auth-card">
+    <div class="logo">Idle <span>Industry</span></div>
+    <div class="tagline">Build your empire. No email required.</div>
+    <div id="auth-title">Sign in</div>
+    <div class="field">
+      <label>Username</label>
+      <input type="text" id="auth-username" placeholder="your_username"
+             autocomplete="username" maxlength="20" spellcheck="false">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <div id="auth-error"></div>
+    <button id="auth-submit">Sign in</button>
+    <div id="auth-toggle">No account? <a id="auth-switch">Sign up</a></div>
+  </div>
+
+  <!-- Live server stats -->
+  <div id="login-stats">
+    <div class="ls-item">
+      <div class="ls-label">Server Time</div>
+      <div class="ls-value" id="ls-time">--:--:--</div>
+    </div>
+    <div class="ls-item">
+      <div class="ls-label">Active Accounts</div>
+      <div class="ls-value" id="ls-accounts">—</div>
+    </div>
+    <div class="ls-item">
+      <div class="ls-label">Cost Multiplier</div>
+      <div class="ls-value" id="ls-multiplier">—</div>
+    </div>
+    <div class="ls-item">
+      <div class="ls-label">Idle Cap</div>
+      <div class="ls-value" id="ls-idle">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Game screen ── -->
+<div id="game-screen">
+  <div id="motd-banner" style="display:none;">
+    <span class="motd-text" id="motd-text"></span>
+    <div class="motd-actions">
+      <button class="motd-dismiss" onclick="dismissMotdToday()">Don't show today</button>
+      <button class="motd-close" onclick="document.getElementById('motd-banner').style.display='none'">✕</button>
+    </div>
+  </div>
+  <div id="header">
+    <h1>Idle <span>Industry</span><button class="version-tag" onclick="openChangelog()">v0.3</button></h1>
+    <div id="stats">
+      <div id="money-display">$0.00</div>
+      <div id="income-display">$0.00 / sec</div>
+    </div>
+    <div id="auth-area">
+      <div class="sync-dot" id="sync-dot" title="Synced"></div>
+      <span id="username-display"></span>
+      <span id="rank-badge" class="rank-badge" style="display:none"></span>
+      <button class="hdr-btn" id="leaderboard-btn">🏆 Top</button>
+      <button class="hdr-btn danger" id="signout-btn">Sign out</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="offline-toast" style="display:none"></div>
+    <div class="section-label">Industries</div>
+    <div id="industry-list"></div>
+  </div>
+
+  <div id="footer">
+    <button id="reset-btn">Reset Game</button>
+  </div>
+</div>
+
+<!-- ── Admin screen ── -->
+<div id="admin-screen">
+  <div id="admin-header">
+    <div class="admin-brand">
+      Idle Industry <span class="badge">Admin</span><button class="version-tag" onclick="openChangelog()" style="margin-left:10px;">v0.3</button>
+    </div>
+    <div id="admin-user-area">
+      <span id="admin-username-display"></span>
+      <button class="hdr-btn danger" id="admin-signout-btn">Sign out</button>
+    </div>
+  </div>
+
+  <div id="admin-nav">
+    <button class="tab-btn active" data-tab="tab-industries">⚙️ Industries</button>
+    <button class="tab-btn" data-tab="tab-ranks">🏅 Ranks</button>
+    <button class="tab-btn" data-tab="tab-accounts">👥 Accounts</button>
+    <button class="tab-btn" data-tab="tab-server">📢 Server</button>
+  </div>
+
+  <div id="admin-body">
+
+    <!-- Industries tab -->
+    <div id="tab-industries" class="tab-panel active">
+      <div class="panel-title">Industry Configuration</div>
+      <div class="panel-sub">Edit building names, costs, and income rates. Changes apply to all players immediately.</div>
+      <div id="industry-editor"></div>
+      <div class="global-cfg">
+        <div class="ef">
+          <label>Cost Scale (multiplier per purchase)</label>
+          <input type="number" id="cfg-cost-scale" step="0.01" min="1.00" max="3.00" placeholder="1.15">
+        </div>
+        <div class="ef">
+          <label>Max Offline Hours (income cap)</label>
+          <input type="number" id="cfg-max-offline" step="0.5" min="0.5" max="24" placeholder="2">
+        </div>
+        <div class="ef">
+          <label>Starting Money for New Players ($)</label>
+          <input type="number" id="cfg-starting-money" step="1" min="0" placeholder="10">
+        </div>
+      </div>
+      <div class="action-bar">
+        <button class="btn-secondary" id="add-building-btn">+ Add Building</button>
+        <span style="flex:1"></span>
+        <span class="status-msg" id="cfg-status"></span>
+        <button class="btn-secondary" id="cfg-reset-btn">Reset to Defaults</button>
+        <button class="btn-primary" id="cfg-save-btn">Save Configuration</button>
+      </div>
+    </div>
+
+    <!-- Ranks tab -->
+    <div id="tab-ranks" class="tab-panel">
+      <div class="panel-title">Rank Configuration</div>
+      <div class="panel-sub">Define player ranks. Each rank gives bonus income (multiplier) and extra offline earning hours. Assign ranks to players from the Accounts tab.</div>
+      <div id="rank-editor"></div>
+      <div class="action-bar">
+        <button class="btn-secondary" id="add-rank-btn">+ Add Rank</button>
+        <span style="flex:1"></span>
+        <span class="status-msg" id="rank-status"></span>
+        <button class="btn-secondary" id="rank-reset-btn">Reset to Defaults</button>
+        <button class="btn-primary" id="rank-save-btn">Save Ranks</button>
+      </div>
+    </div>
+
+    <!-- Accounts tab -->
+    <div id="tab-accounts" class="tab-panel">
+      <div class="panel-title">Account Management</div>
+      <div class="panel-sub">Manage player accounts, set money, assign ranks, or wipe saves.</div>
+      <div class="tbl-toolbar">
+        <span class="tbl-count" id="user-count">Loading…</span>
+        <button class="btn-refresh" id="refresh-users-btn">↻ Refresh</button>
+      </div>
+      <div class="tbl-wrap">
+        <div id="users-container"><div class="empty-state">Loading accounts…</div></div>
+      </div>
+    </div>
+
+    <!-- Server tab -->
+    <div id="tab-server" class="tab-panel">
+      <div class="panel-title">Events &amp; Announcements</div>
+      <div class="panel-sub">Schedule timed events with income bonuses and player announcements (MOTD). Multiple events can run simultaneously.</div>
+      <div id="event-live-preview" style="margin-bottom:16px;"></div>
+      <div id="event-editor"></div>
+      <div class="action-bar">
+        <button class="btn-secondary" id="add-event-btn">+ Add Event</button>
+        <span style="flex:1"></span>
+        <span class="status-msg" id="event-status"></span>
+        <button class="btn-primary" id="event-save-btn">Save Events</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Set Money modal -->
+<div class="modal-overlay" id="set-money-modal">
+  <div class="modal-box">
+    <div class="modal-title">💰 Set Player Money</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:14px;">Player: <strong id="sm-target-name"></strong></div>
+    <div class="field">
+      <label>New Money Amount ($)</label>
+      <input type="number" id="sm-amount" placeholder="0" min="0" step="1">
+    </div>
+    <div id="sm-error" style="font-size:0.8rem;color:var(--red);min-height:18px;"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="sm-cancel-btn">Cancel</button>
+      <button class="btn-primary" id="sm-confirm-btn">Set Money</button>
+    </div>
+  </div>
+</div>
+
+<!-- Changelog modal -->
+<div class="modal-overlay" id="changelog-modal">
+  <div class="modal-box">
+    <div class="modal-title">📋 Changelog</div>
+    <div id="changelog-content"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="changelog-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Leaderboard modal -->
+<div class="modal-overlay" id="leaderboard-modal">
+  <div class="modal-box">
+    <div class="modal-title">🏆 Leaderboard — Top Players</div>
+    <div id="leaderboard-content"><div class="lb-empty">Loading…</div></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="lb-refresh-btn">↻ Refresh</button>
+      <button class="btn-primary" id="lb-close-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Emoji picker panel (shared, floats fixed) -->
+<div id="emoji-picker-panel" style="display:none;"></div>
+
+<!-- Reset password modal -->
+<div class="modal-overlay" id="reset-pw-modal">
+  <div class="modal-box">
+    <div class="modal-title">Reset Password</div>
+    <div class="field">
+      <label>New Password for <strong id="modal-target-name"></strong></label>
+      <input type="password" id="modal-new-pw" placeholder="New password" autocomplete="new-password">
+    </div>
+    <div id="modal-error" style="font-size:0.8rem;color:var(--red);min-height:18px;"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="modal-cancel-btn">Cancel</button>
+      <button class="btn-primary" id="modal-confirm-btn">Set Password</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════════════════════
+const SUPABASE_URL      = "https://fwawlsbjltgvcpyezciw.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_cWfZRmHb55YMA-wa7hb6rw_qP6dIuYi";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ─── Default industry data (fallback if DB config unavailable) ─
+const DEFAULT_INDUSTRIES = [
+  { id: 0, name: "Lemonade Stand", emoji: "🍋", baseCost: 10,         baseIncome: 0.10   },
+  { id: 1, name: "Bakery",         emoji: "🥐", baseCost: 100,        baseIncome: 0.80   },
+  { id: 2, name: "Factory",        emoji: "🏭", baseCost: 1_000,      baseIncome: 6.00   },
+  { id: 3, name: "Oil Rig",        emoji: "🛢️", baseCost: 10_000,     baseIncome: 47.00  },
+  { id: 4, name: "Tech Company",   emoji: "💻", baseCost: 100_000,    baseIncome: 260.00 },
+  { id: 5, name: "Bank",           emoji: "🏦", baseCost: 1_000_000,  baseIncome: 1_400  },
+  { id: 6, name: "Space Program",  emoji: "🚀", baseCost: 10_000_000, baseIncome: 7_800  },
+];
+const DEFAULT_COST_SCALE    = 1.15;
+const DEFAULT_MAX_OFFLINE_H = 2;
+
+const DEFAULT_RANKS = [
+  { id: 0, name: "Intern",    emoji: "🪪", incomeBonus: 0,    offlineBonus: 0   },
+  { id: 1, name: "Associate", emoji: "💼", incomeBonus: 0.05, offlineBonus: 0.5 },
+  { id: 2, name: "Manager",   emoji: "📊", incomeBonus: 0.15, offlineBonus: 1   },
+  { id: 3, name: "Director",  emoji: "🏢", incomeBonus: 0.30, offlineBonus: 1.5 },
+  { id: 4, name: "VP",        emoji: "🎯", incomeBonus: 0.50, offlineBonus: 2   },
+  { id: 5, name: "CEO",       emoji: "👑", incomeBonus: 1.00, offlineBonus: 4   },
+];
+
+// ─── Live config (overwritten from DB) ────────────────────
+let INDUSTRIES     = DEFAULT_INDUSTRIES.map(x => ({ ...x }));
+let RANKS          = DEFAULT_RANKS.map(x => ({ ...x }));
+let COST_SCALE     = DEFAULT_COST_SCALE;
+let MAX_OFFLINE    = DEFAULT_MAX_OFFLINE_H * 3600;
+let STARTING_MONEY = 10;
+let GAME_EVENTS    = [];  // array of { id, name, incomeBonus, startTime, endTime, motd }
+const SESSION_KEY = "idi_session";
+
+// ─── State ────────────────────────────────────────────────
+let state = {
+  money:    10,
+  lastSave: Date.now(),
+  owned:    new Array(INDUSTRIES.length).fill(0),
+};
+
+let currentUserId   = null;
+let currentUsername = null;
+let currentIsAdmin  = false;
+let currentRankId   = 0;
+let tickInterval    = null;
+
+// ─── Server time sync ─────────────────────────────────────
+let serverTimeOffset = 0;
+
+async function syncServerTime() {
+  const before = Date.now();
+  const { data } = await sb.rpc("get_server_time");
+  if (data) {
+    const rtt = Date.now() - before;
+    serverTimeOffset = data - (before + rtt / 2);
+  }
+}
+
+function now() { return Date.now() + serverTimeOffset; }
+
+// ─── Game config (load from DB) ───────────────────────────
+async function loadGameConfig() {
+  const { data, error } = await sb.rpc("get_game_config");
+  if (error || !data) { console.warn("[Config] get_game_config failed:", error?.message); return; }
+  console.log("[Config] loaded:", data);
+  applyGameConfig(data);
+}
+
+function applyGameConfig(cfg) {
+  if (cfg.industries && Array.isArray(cfg.industries)) {
+    INDUSTRIES = cfg.industries.map((ind, i) => ({
+      id:         ind.id   ?? i,
+      name:       ind.name       || DEFAULT_INDUSTRIES[i]?.name   || `Industry ${i}`,
+      emoji:      ind.emoji      || DEFAULT_INDUSTRIES[i]?.emoji  || "🏭",
+      baseCost:   Number(ind.baseCost)   || DEFAULT_INDUSTRIES[i]?.baseCost   || 100,
+      baseIncome: Number(ind.baseIncome) || DEFAULT_INDUSTRIES[i]?.baseIncome || 1,
+    }));
+  }
+  if (cfg.costScale)             COST_SCALE     = Number(cfg.costScale);
+  if (cfg.maxOfflineHours)       MAX_OFFLINE    = Number(cfg.maxOfflineHours) * 3600;
+  if (cfg.startingMoney != null) STARTING_MONEY = Number(cfg.startingMoney);
+  if (Array.isArray(cfg.events)) {
+    GAME_EVENTS = cfg.events.map((ev, i) => ({
+      id:          i,
+      name:        ev.name        || "Event",
+      incomeBonus: Number(ev.incomeBonus) || 0,
+      startTime:   ev.startTime   || "",
+      endTime:     ev.endTime     || "",
+      motd:        ev.motd        || "",
+    }));
+  } else {
+    GAME_EVENTS = [];
+  }
+  // Ensure owned array matches industry count
+  while (state.owned.length < INDUSTRIES.length) state.owned.push(0);
+  if (cfg.ranks && Array.isArray(cfg.ranks)) {
+    RANKS = cfg.ranks.map((r, i) => ({
+      id:           i,
+      name:         r.name         || DEFAULT_RANKS[i]?.name         || `Rank ${i}`,
+      emoji:        r.emoji        || DEFAULT_RANKS[i]?.emoji        || "⭐",
+      incomeBonus:  Number(r.incomeBonus)  || 0,
+      offlineBonus: Number(r.offlineBonus) || 0,
+    }));
+  }
+}
+
+// ─── Active events & MOTD dismiss ─────────────────────────
+function getActiveEvents() {
+  const n = now();
+  const active = GAME_EVENTS.filter(ev => {
+    if (!ev.startTime || !ev.endTime) return false;
+    return n >= new Date(ev.startTime).getTime() && n <= new Date(ev.endTime).getTime();
+  });
+  console.log(`[Events] ${GAME_EVENTS.length} loaded, ${active.length} active. Now=${new Date(n).toISOString()}`,
+    GAME_EVENTS.map(ev => ({ name: ev.name, start: ev.startTime, end: ev.endTime, active: active.includes(ev) })));
+  return active;
+}
+function getEventBonus() {
+  return getActiveEvents().reduce((sum, ev) => sum + (ev.incomeBonus || 0), 0);
+}
+function getMotdDismissKey() {
+  const t = new Date(now() + 8 * 3600000); // SGT
+  return `idi_motd_${t.getUTCFullYear()}-${String(t.getUTCMonth()+1).padStart(2,"0")}-${String(t.getUTCDate()).padStart(2,"0")}`;
+}
+function isMotdDismissedToday() { return localStorage.getItem(getMotdDismissKey()) === "1"; }
+function dismissMotdToday() {
+  localStorage.setItem(getMotdDismissKey(), "1");
+  document.getElementById("motd-banner").style.display = "none";
+}
+function updateEventBanner() {
+  const banner     = document.getElementById("motd-banner");
+  const motdEl     = document.getElementById("motd-text");
+  if (!banner || !motdEl) return;
+  const activeMsgs = getActiveEvents().filter(ev => ev.motd).map(ev => ev.motd);
+  if (activeMsgs.length > 0 && !isMotdDismissedToday()) {
+    motdEl.textContent = activeMsgs.join("  ·  ");
+    banner.style.display = "flex";
+  } else {
+    banner.style.display = "none";
+  }
+}
+
+// ─── Formatting ───────────────────────────────────────────
+function fmt(n) {
+  if (n < 1e3)  return "$" + n.toFixed(2);
+  if (n < 1e6)  return "$" + (n / 1e3).toFixed(2)  + "K";
+  if (n < 1e9)  return "$" + (n / 1e6).toFixed(2)  + "M";
+  if (n < 1e12) return "$" + (n / 1e9).toFixed(2)  + "B";
+  if (n < 1e15) return "$" + (n / 1e12).toFixed(2) + "T";
+  return "$" + (n / 1e15).toFixed(2) + "Qa";
+}
+function fmtTime(secs) {
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = Math.floor(secs % 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+// ─── Calculations ─────────────────────────────────────────
+function getCost(i)    { return Math.ceil(INDUSTRIES[i].baseCost * Math.pow(COST_SCALE, state.owned[i])); }
+function getIncome(i)  { return INDUSTRIES[i].baseIncome * state.owned[i]; }
+function totalIncome() { return INDUSTRIES.reduce((s, _, i) => s + getIncome(i), 0) * getRankMultiplier() * (1 + getEventBonus()); }
+
+function getRankMultiplier() {
+  const r = RANKS[currentRankId] || RANKS[0];
+  return 1 + (r?.incomeBonus || 0);
+}
+function getRankOfflineCap() {
+  const r = RANKS[currentRankId] || RANKS[0];
+  return MAX_OFFLINE + (r?.offlineBonus || 0) * 3600;
+}
+
+// ─── State helpers ────────────────────────────────────────
+function applyPayload(saved) {
+  state.money    = saved.money    ?? 10;
+  state.lastSave = saved.lastSave ?? now();
+  state.owned    = saved.owned    ?? new Array(INDUSTRIES.length).fill(0);
+  while (state.owned.length < INDUSTRIES.length) state.owned.push(0);
+}
+
+// ─── Session (localStorage) ───────────────────────────────
+function saveSession(userId, username, isAdmin = false) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId, username, isAdmin }));
+}
+function loadSession() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+}
+function clearSession() { localStorage.removeItem(SESSION_KEY); }
+
+// ─── Cache (fast load on return) ─────────────────────────
+function cacheKey()   { return `idi_cache_${currentUserId}`; }
+function writeCache() {
+  state.lastSave = now();
+  localStorage.setItem(cacheKey(), JSON.stringify({ money: state.money, lastSave: state.lastSave, owned: state.owned }));
+}
+function readCache()  {
+  try { const r = localStorage.getItem(cacheKey()); return r ? JSON.parse(r) : null; } catch { return null; }
+}
+function clearCache() { if (currentUserId) localStorage.removeItem(cacheKey()); }
+
+// ─── Cloud save / load ────────────────────────────────────
+function setSyncing(val) { document.getElementById("sync-dot").classList.toggle("syncing", val); }
+
+async function saveCloud() {
+  setSyncing(true);
+  const { error } = await sb.rpc("save_game", {
+    p_user_id: currentUserId,
+    p_money:   state.money,
+    p_owned:   state.owned,
+  });
+  setSyncing(false);
+  if (error) console.warn("Cloud save failed:", error.message);
+}
+
+async function loadCloud() {
+  const { data, error } = await sb.rpc("load_game", { p_user_id: currentUserId });
+  if (error) { console.warn("Cloud load failed:", error.message); return null; }
+  return data;
+}
+
+function saveGame() { writeCache(); saveCloud(); }
+
+// ─── Offline / idle progress ──────────────────────────────
+function applyIdleProgress(silent = false) {
+  const elapsed = Math.min((now() - state.lastSave) / 1000, getRankOfflineCap());
+  if (elapsed < 2 || totalIncome() === 0) return;
+  const earned = totalIncome() * elapsed;
+  state.money += earned;
+  state.lastSave = now();
+  if (!silent && elapsed >= 10) {
+    const toast = document.getElementById("offline-toast");
+    toast.style.display = "flex";
+    toast.innerHTML = `<p>While you were away for <strong>${fmtTime(elapsed)}</strong> you earned <strong>${fmt(earned)}</strong>.</p>
+      <button onclick="this.parentElement.style.display='none'">✕</button>`;
+    setTimeout(() => { toast.style.display = "none"; }, 7000);
+  }
+}
+
+// ─── Screen switching ─────────────────────────────────────
+function showScreen(id) {
+  ["auth-screen", "game-screen", "admin-screen"].forEach(s => {
+    document.getElementById(s).classList.toggle("visible", s === id);
+  });
+}
+function showGame(username) {
+  stopLoginStats();
+  document.getElementById("username-display").textContent = username;
+  showScreen("game-screen");
+  updateEventBanner();
+}
+function showAdmin(username) {
+  stopLoginStats();
+  document.getElementById("admin-username-display").textContent = username;
+  showScreen("admin-screen");
+}
+// ─── Login page live stats ─────────────────────────────────
+let loginStatsInterval = null;
+
+function stopLoginStats() {
+  if (loginStatsInterval) { clearInterval(loginStatsInterval); loginStatsInterval = null; }
+}
+
+async function startLoginStats() {
+  stopLoginStats();
+
+  function tick() {
+    const t   = new Date(now() + 8 * 3600000); // UTC+8 Singapore
+    const hh  = String(t.getUTCHours()).padStart(2, "0");
+    const mm  = String(t.getUTCMinutes()).padStart(2, "0");
+    const ss  = String(t.getUTCSeconds()).padStart(2, "0");
+    const el  = document.getElementById("ls-time");
+    if (el) el.textContent = `${hh}:${mm}:${ss} SGT`;
+  }
+  tick();
+  loginStatsInterval = setInterval(tick, 1000);
+
+  // Populate game config stats
+  document.getElementById("ls-multiplier").textContent = COST_SCALE + "×";
+  document.getElementById("ls-idle").textContent       = (MAX_OFFLINE / 3600).toFixed(1) + "h";
+
+  // Fetch live player count
+  const { data } = await sb.rpc("get_public_stats");
+  if (data) {
+    const el = document.getElementById("ls-accounts");
+    if (el) el.textContent = data.player_count ?? "—";
+    if (data.cost_scale)       { document.getElementById("ls-multiplier").textContent = data.cost_scale + "×"; }
+    if (data.max_offline_hours){ document.getElementById("ls-idle").textContent       = data.max_offline_hours + "h"; }
+  }
+}
+
+function showAuth() {
+  showScreen("auth-screen");
+  startLoginStats();
+  setTimeout(() => document.getElementById("auth-username").focus(), 50);
+}
+
+// ─── Animated background canvas (runs permanently, fixed behind all screens) ─
+function initBgCanvas() {
+  const canvas = document.getElementById("bg-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0;
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  let t = 0, raf;
+
+  const charts = [
+    { baseY: 0.22, amp: 55, freq: 0.011, speed: 0.38, phase: 0.0, color: "108,99,255" },
+    { baseY: 0.50, amp: 38, freq: 0.008, speed: 0.24, phase: 2.1, color: "133,125,248" },
+    { baseY: 0.75, amp: 42, freq: 0.014, speed: 0.31, phase: 4.5, color: "76,175,138"  },
+  ];
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid
+    const gC = 14, gR = 9;
+    for (let c = 0; c <= gC; c++) {
+      ctx.strokeStyle = "rgba(108,99,255,0.055)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo((c / gC) * W, 0); ctx.lineTo((c / gC) * W, H); ctx.stroke();
+    }
+    for (let r = 0; r <= gR; r++) {
+      ctx.strokeStyle = r === gR ? "rgba(108,99,255,0.10)" : "rgba(108,99,255,0.045)";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, (r / gR) * H); ctx.lineTo(W, (r / gR) * H); ctx.stroke();
+    }
+
+    // Rising bar chart at bottom
+    const bars = 22, bw = W / bars;
+    for (let b = 0; b < bars; b++) {
+      const bh = (0.25 + 0.75 * Math.abs(Math.sin(b * 0.61 + t * 0.0006))) * H * 0.22;
+      const x = b * bw;
+      const g = ctx.createLinearGradient(x, H - bh, x, H);
+      g.addColorStop(0, "rgba(108,99,255,0.08)");
+      g.addColorStop(1, "rgba(108,99,255,0.0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(x + 2, H - bh, bw - 4, bh);
+    }
+
+    // Stock chart lines
+    charts.forEach(ch => {
+      const by = ch.baseY * H;
+      function yAt(x) {
+        return by + Math.sin(x * ch.freq + t * ch.speed * 0.001) * ch.amp
+                  + Math.sin(x * ch.freq * 2.3 + t * ch.speed * 0.00065) * ch.amp * 0.35;
+      }
+
+      // Fill
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 4) ctx.lineTo(x, yAt(x));
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      const ag = ctx.createLinearGradient(0, by - ch.amp, 0, by + ch.amp + 30);
+      ag.addColorStop(0, `rgba(${ch.color},0.055)`);
+      ag.addColorStop(1, `rgba(${ch.color},0.0)`);
+      ctx.fillStyle = ag; ctx.fill();
+
+      // Line
+      ctx.beginPath();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = `rgba(${ch.color},0.22)`;
+      const pts = [];
+      for (let x = 0; x <= W; x += 4) {
+        const y = yAt(x);
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        if (x % 72 < 4) pts.push({ x, y });
+      }
+      ctx.stroke();
+
+      // Data points
+      ctx.fillStyle = `rgba(${ch.color},0.5)`;
+      pts.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2); ctx.fill();
+      });
+    });
+
+    // Corner brackets
+    ctx.strokeStyle = "rgba(108,99,255,0.14)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(W - 70, 18); ctx.lineTo(W - 18, 18); ctx.lineTo(W - 18, 70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(70, H - 18); ctx.lineTo(18, H - 18); ctx.lineTo(18, H - 70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(18, 18); ctx.lineTo(18, 70); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(18, 18); ctx.lineTo(70, 18); ctx.stroke();
+
+    t++;
+    raf = requestAnimationFrame(draw);
+  }
+
+  draw();
+}
+
+// ─── Login (player) ───────────────────────────────────────
+let configRefreshInterval = null;
+
+async function onLogin(userId, username) {
+  currentUserId   = userId;
+  currentUsername = username;
+  currentIsAdmin  = false;
+  currentRankId   = 0;
+
+  // Always fetch fresh config on login so events/ranks are up to date
+  await loadGameConfig();
+
+  const cached = readCache();
+  if (cached) { applyPayload(cached); render(); }
+  showGame(username);
+  if (!tickInterval) tickInterval = setInterval(tick, 1000);
+
+  // Refresh game config every 5 minutes so live events apply without re-login
+  if (configRefreshInterval) clearInterval(configRefreshInterval);
+  configRefreshInterval = setInterval(async () => {
+    await loadGameConfig();
+    updateEventBanner();
+  }, 5 * 60 * 1000);
+
+  const cloudSave = await loadCloud();
+  if (cloudSave) {
+    if (!cached || cloudSave.last_save >= (cached.lastSave ?? 0)) {
+      applyPayload({ money: cloudSave.money, owned: cloudSave.owned, lastSave: cloudSave.last_save });
+    }
+    if (cloudSave.rank_id != null) currentRankId = cloudSave.rank_id;
+    applyIdleProgress();
+    writeCache();
+    render();
+  } else {
+    applyIdleProgress();
+    await saveCloud();
+  }
+}
+
+// ─── Login (admin) ────────────────────────────────────────
+async function onAdminLogin(userId, username) {
+  currentUserId   = userId;
+  currentUsername = username;
+  currentIsAdmin  = true;
+  showAdmin(username);
+  await renderIndustryEditor();
+  await loadUsersTable();
+}
+
+// ─── Logout ───────────────────────────────────────────────
+function onLogout() {
+  clearSession();
+  currentUserId   = null;
+  currentUsername = null;
+  currentIsAdmin  = false;
+  currentRankId   = 0;
+  if (tickInterval)        { clearInterval(tickInterval);        tickInterval        = null; }
+  if (configRefreshInterval) { clearInterval(configRefreshInterval); configRefreshInterval = null; }
+  state       = { money: STARTING_MONEY, lastSave: now(), owned: new Array(INDUSTRIES.length).fill(0) };
+  firstRender = true;
+  document.getElementById("industry-list").innerHTML = "";
+  showAuth();
+}
+
+// ─── Auth form ────────────────────────────────────────────
+let isSignUp = false;
+
+function setAuthMode(signup) {
+  isSignUp = signup;
+  document.getElementById("auth-title").textContent  = signup ? "Create account" : "Sign in";
+  document.getElementById("auth-submit").textContent = signup ? "Sign up" : "Sign in";
+  document.getElementById("auth-switch").textContent = signup ? "Sign in" : "Sign up";
+  document.getElementById("auth-toggle").firstChild.textContent =
+    signup ? "Already have an account? " : "No account? ";
+  const e = document.getElementById("auth-error"); e.className = ""; e.textContent = "";
+}
+
+function setAuthError(msg) { const e = document.getElementById("auth-error"); e.className = "err"; e.textContent = msg; }
+function setAuthOk(msg)    { const e = document.getElementById("auth-error"); e.className = "ok";  e.textContent = msg; }
+
+function validateUsername(u) {
+  if (!u)              return "Username is required.";
+  if (u.length < 3)   return "Username must be at least 3 characters.";
+  if (u.length > 20)  return "Username must be 20 characters or fewer.";
+  if (!/^[a-zA-Z0-9_]+$/.test(u)) return "Only letters, numbers, and underscores.";
+  return null;
+}
+
+document.getElementById("auth-switch").addEventListener("click", () => setAuthMode(!isSignUp));
+
+document.getElementById("auth-submit").addEventListener("click", async () => {
+  const username = document.getElementById("auth-username").value.trim();
+  const password = document.getElementById("auth-password").value;
+  const btn      = document.getElementById("auth-submit");
+
+  const err = validateUsername(username);
+  if (err)      { setAuthError(err); return; }
+  if (!password){ setAuthError("Password is required."); return; }
+
+  btn.disabled    = true;
+  btn.textContent = isSignUp ? "Creating account…" : "Signing in…";
+  document.getElementById("auth-error").textContent = "";
+
+  const rpc  = isSignUp ? "signup" : "signin";
+  const { data, error } = await sb.rpc(rpc, { p_username: username, p_password: password });
+
+  btn.disabled    = false;
+  btn.textContent = isSignUp ? "Sign up" : "Sign in";
+
+  if (error) { setAuthError(error.message); return; }
+  if (data?.error) { setAuthError(data.error); return; }
+
+  if (isSignUp) {
+    setAuthOk("Account created! You can now sign in.");
+    setAuthMode(false);
+    document.getElementById("auth-password").value = "";
+  } else {
+    const uid  = data.user_id;
+    const uname = username.toLowerCase();
+    const admin = !!data.is_admin;
+    saveSession(uid, uname, admin);
+    if (admin) {
+      await onAdminLogin(uid, uname);
+    } else {
+      await onLogin(uid, uname);
+    }
+  }
+});
+
+document.getElementById("auth-password").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("auth-submit").click();
+});
+
+document.getElementById("signout-btn").addEventListener("click", onLogout);
+document.getElementById("admin-signout-btn").addEventListener("click", onLogout);
+
+// ─── Buy ──────────────────────────────────────────────────
+function buyIndustry(i) {
+  const cost = getCost(i);
+  if (state.money < cost) return;
+  state.money -= cost;
+  state.owned[i]++;
+  render();
+  saveGame();
+}
+
+// ─── Render (game) ────────────────────────────────────────
+let firstRender = true;
+
+function render() {
+  document.getElementById("money-display").textContent = fmt(state.money);
+  const eb = getEventBonus();
+  const eventTag = eb > 0 ? `<span class="event-pill">+${Math.round(eb * 100)}% EVENT</span>` : "";
+  document.getElementById("income-display").innerHTML = fmt(totalIncome()) + " / sec" + eventTag;
+
+  // Rank badge — update every render
+  const rank = RANKS[currentRankId] || RANKS[0];
+  const badge = document.getElementById("rank-badge");
+  if (badge) { badge.textContent = `${rank.emoji} ${rank.name}`; badge.style.display = ""; }
+
+  const list = document.getElementById("industry-list");
+
+  if (firstRender) {
+    list.innerHTML = INDUSTRIES.map((ind, i) => `
+      <div class="card" data-id="${i}">
+        <div class="card-emoji">${ind.emoji}</div>
+        <div class="card-info">
+          <div class="card-name">${ind.name}</div>
+          <div class="card-income" data-income="${i}"></div>
+          <div class="card-cost"   data-cost="${i}"></div>
+        </div>
+        <div class="card-right">
+          <div class="owned-badge" data-owned="${i}">0</div>
+          <button class="buy-btn" data-buy="${i}">Buy</button>
+        </div>
+      </div>
+    `).join("");
+
+    list.addEventListener("click", e => {
+      const btn = e.target.closest("[data-buy]");
+      if (btn && !btn.disabled) buyIndustry(+btn.dataset.buy);
+    });
+
+    firstRender = false;
+  }
+
+  INDUSTRIES.forEach((ind, i) => {
+    const cost      = getCost(i);
+    const income    = getIncome(i);
+    const canAfford = state.money >= cost;
+    const card      = list.querySelector(`[data-id="${i}"]`);
+
+    card.querySelector("[data-income]").textContent =
+      state.owned[i] > 0
+        ? `${fmt(income)} / sec  (${fmt(ind.baseIncome)} each)`
+        : `${fmt(ind.baseIncome)} / sec each`;
+
+    card.querySelector("[data-cost]").textContent  = `Cost: ${fmt(cost)}`;
+    card.querySelector("[data-owned]").textContent = state.owned[i];
+    card.querySelector("[data-buy]").disabled      = !canAfford;
+    card.classList.toggle("affordable", canAfford);
+    card.classList.toggle("locked",     !canAfford);
+  });
+}
+
+// ─── Tick (time-based) ────────────────────────────────────
+let tickCount    = 0;
+let lastTickTime = 0;
+
+function tick() {
+  const current  = now();
+  const elapsed  = lastTickTime ? Math.min((current - lastTickTime) / 1000, getRankOfflineCap()) : 1;
+  lastTickTime   = current;
+  state.money   += totalIncome() * elapsed;
+  state.lastSave = current;
+  render();
+  if (++tickCount % 5 === 0) saveGame();
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && currentUserId && !currentIsAdmin) {
+    applyIdleProgress(false);
+    lastTickTime = now();
+    render();
+  }
+});
+
+// ─── Reset ────────────────────────────────────────────────
+document.getElementById("reset-btn").addEventListener("click", async () => {
+  if (!confirm("Reset all progress? This cannot be undone.")) return;
+  clearCache();
+  await sb.rpc("delete_save", { p_user_id: currentUserId });
+  state       = { money: STARTING_MONEY, lastSave: now(), owned: new Array(INDUSTRIES.length).fill(0) };
+  firstRender = true;
+  document.getElementById("industry-list").innerHTML = "";
+  render();
+});
+
+// ════════════════════════════════════════════════════════════
+// ADMIN — Tab switching
+// ════════════════════════════════════════════════════════════
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.tab;
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(target).classList.add("active");
+    if (target === "tab-accounts") loadUsersTable();
+    if (target === "tab-ranks")    renderRankEditor();
+    if (target === "tab-server")   renderServerTab();
+    // Refresh event status badges every time server tab is opened
+  });
+});
+
+// ════════════════════════════════════════════════════════════
+// ADMIN — Industry editor
+// ════════════════════════════════════════════════════════════
+let editorInds = []; // working copy of industries in the editor
+
+function getEditorValues() {
+  return editorInds.map((ind, i) => ({
+    id:         i,
+    name:       document.getElementById(`ie-name-${i}`)?.value.trim()            || ind.name       || "Building",
+    emoji:      document.getElementById(`ie-emoji-${i}`)?.value.trim()           || ind.emoji      || "🏭",
+    baseCost:   parseFloat(document.getElementById(`ie-cost-${i}`)?.value)       || ind.baseCost   || 100,
+    baseIncome: parseFloat(document.getElementById(`ie-income-${i}`)?.value)     || ind.baseIncome || 1,
+  }));
+}
+
+function renderEditorRows() {
+  document.getElementById("industry-editor").innerHTML = editorInds.map((ind, i) => `
+    <div class="ind-editor-row">
+      <div class="ind-row-num" style="align-self:end;margin-bottom:2px;">#${i + 1}</div>
+      <div class="ef">
+        <label>Name</label>
+        <input type="text" id="ie-name-${i}" value="${escHtml(ind.name)}" maxlength="30">
+      </div>
+      <div class="ef">
+        <label>Emoji</label>
+        <button type="button" class="emoji-btn" id="ie-emoji-btn-${i}"
+          onclick="toggleEmojiPicker('ie-emoji-btn-${i}','ie-emoji-${i}')">
+          <span class="ep-emoji">${ind.emoji}</span><span class="ep-arrow">▾</span>
+        </button>
+        <input type="hidden" id="ie-emoji-${i}" value="${ind.emoji}">
+      </div>
+      <div class="ef">
+        <label>Base Cost ($)</label>
+        <input type="number" id="ie-cost-${i}" value="${ind.baseCost}" min="1" step="1">
+      </div>
+      <div class="ef">
+        <label>Income ($/s)</label>
+        <input type="number" id="ie-income-${i}" value="${ind.baseIncome}" min="0.01" step="0.01">
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="ie-del-btn" onclick="removeEditorRow(${i})" title="Remove building"
+          ${editorInds.length <= 1 ? "disabled" : ""}>✕</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function addEditorRow() {
+  editorInds = getEditorValues();
+  editorInds.push({ id: editorInds.length, name: "New Building", emoji: "🏗️", baseCost: 100, baseIncome: 1.0 });
+  renderEditorRows();
+  // Scroll to the new row and focus its name field
+  const last = document.getElementById(`ie-name-${editorInds.length - 1}`);
+  if (last) { last.scrollIntoView({ behavior: "smooth", block: "center" }); last.focus(); }
+}
+
+function removeEditorRow(i) {
+  if (editorInds.length <= 1) return;
+  editorInds = getEditorValues();
+  editorInds.splice(i, 1);
+  editorInds = editorInds.map((ind, idx) => ({ ...ind, id: idx }));
+  renderEditorRows();
+}
+
+async function renderIndustryEditor() {
+  const { data } = await sb.rpc("get_game_config");
+  if (data) applyGameConfig(data);
+
+  const cfg  = data || {};
+  const scale = cfg.costScale       || COST_SCALE;
+  const maxH  = cfg.maxOfflineHours || (MAX_OFFLINE / 3600);
+
+  document.getElementById("cfg-cost-scale").value     = scale;
+  document.getElementById("cfg-max-offline").value    = maxH;
+  document.getElementById("cfg-starting-money").value = cfg.startingMoney ?? STARTING_MONEY;
+
+  editorInds = INDUSTRIES.map(x => ({ ...x }));
+  renderEditorRows();
+}
+
+document.getElementById("add-building-btn").addEventListener("click", addEditorRow);
+
+document.getElementById("cfg-save-btn").addEventListener("click", async () => {
+  const btn      = document.getElementById("cfg-save-btn");
+  const statusEl = document.getElementById("cfg-status");
+  btn.disabled = true;
+  statusEl.className = "status-msg";
+  statusEl.textContent = "Saving…";
+
+  const industries      = getEditorValues();
+  const costScale       = parseFloat(document.getElementById("cfg-cost-scale").value)     || DEFAULT_COST_SCALE;
+  const maxOfflineHours = parseFloat(document.getElementById("cfg-max-offline").value)    || DEFAULT_MAX_OFFLINE_H;
+  const startingMoney   = parseFloat(document.getElementById("cfg-starting-money").value) || 10;
+
+  // Fetch current config first so we don't wipe ranks / events / other fields
+  const { data: cfgData } = await sb.rpc("get_game_config");
+  const newCfg = { ...(cfgData || {}), industries, costScale, maxOfflineHours, startingMoney };
+
+  const { data, error } = await sb.rpc("set_game_config", {
+    p_user_id: currentUserId,
+    p_config:  newCfg,
+  });
+
+  btn.disabled = false;
+
+  if (error || data?.error) {
+    statusEl.className = "status-msg err";
+    statusEl.textContent = error?.message || data?.error || "Failed to save.";
+  } else {
+    applyGameConfig(newCfg);
+    editorInds = INDUSTRIES.map(x => ({ ...x })); // sync editor state
+    statusEl.className = "status-msg ok";
+    statusEl.textContent = "Saved! Changes are live for all players.";
+    setTimeout(() => { statusEl.textContent = ""; }, 4000);
+  }
+});
+
+document.getElementById("cfg-reset-btn").addEventListener("click", async () => {
+  if (!confirm("Reset industry config to original defaults? This will remove any custom buildings.")) return;
+  const btn      = document.getElementById("cfg-save-btn");
+  const statusEl = document.getElementById("cfg-status");
+  btn.disabled = true;
+
+  const defaultCfg = {
+    industries:      DEFAULT_INDUSTRIES.map(x => ({ ...x })),
+    costScale:       DEFAULT_COST_SCALE,
+    maxOfflineHours: DEFAULT_MAX_OFFLINE_H,
+  };
+
+  const { data, error } = await sb.rpc("set_game_config", {
+    p_user_id: currentUserId,
+    p_config:  defaultCfg,
+  });
+
+  btn.disabled = false;
+
+  if (error || data?.error) {
+    statusEl.className = "status-msg err";
+    statusEl.textContent = error?.message || data?.error || "Failed.";
+  } else {
+    applyGameConfig(defaultCfg);
+    await renderIndustryEditor();
+    statusEl.className = "status-msg ok";
+    statusEl.textContent = "Reset to defaults.";
+    setTimeout(() => { statusEl.textContent = ""; }, 3000);
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+// ADMIN — Rank editor
+// ════════════════════════════════════════════════════════════
+let editorRanks = [];
+
+function getRankEditorValues() {
+  return editorRanks.map((r, i) => ({
+    id:           i,
+    name:         document.getElementById(`re-name-${i}`)?.value.trim()          || r.name    || "Rank",
+    emoji:        document.getElementById(`re-emoji-${i}`)?.value.trim()         || r.emoji   || "⭐",
+    incomeBonus:  (parseFloat(document.getElementById(`re-income-${i}`)?.value)  || 0) / 100,
+    offlineBonus: parseFloat(document.getElementById(`re-offline-${i}`)?.value)  || 0,
+  }));
+}
+
+function renderRankEditorRows() {
+  document.getElementById("rank-editor").innerHTML = editorRanks.map((r, i) => `
+    <div class="rank-editor-row">
+      <div class="ind-row-num" style="align-self:end;margin-bottom:2px;">#${i + 1}</div>
+      <div class="ef">
+        <label>Rank Name</label>
+        <input type="text" id="re-name-${i}" value="${escHtml(r.name)}" maxlength="20">
+      </div>
+      <div class="ef">
+        <label>Emoji</label>
+        <button type="button" class="emoji-btn" id="re-emoji-btn-${i}"
+          onclick="toggleEmojiPicker('re-emoji-btn-${i}','re-emoji-${i}')">
+          <span class="ep-emoji">${r.emoji}</span><span class="ep-arrow">▾</span>
+        </button>
+        <input type="hidden" id="re-emoji-${i}" value="${r.emoji}">
+      </div>
+      <div class="ef">
+        <label>Income Bonus (%)</label>
+        <input type="number" id="re-income-${i}" value="${Math.round((r.incomeBonus || 0) * 100)}" min="0" step="1" max="500">
+      </div>
+      <div class="ef">
+        <label>Offline Bonus (hrs)</label>
+        <input type="number" id="re-offline-${i}" value="${r.offlineBonus || 0}" min="0" step="0.5" max="24">
+      </div>
+      <div style="display:flex;align-items:flex-end;">
+        <button class="ie-del-btn" onclick="removeRankRow(${i})" title="Remove rank"
+          ${editorRanks.length <= 1 ? "disabled" : ""}>✕</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function addRankRow() {
+  editorRanks = getRankEditorValues();
+  editorRanks.push({ id: editorRanks.length, name: "New Rank", emoji: "⭐", incomeBonus: 0, offlineBonus: 0 });
+  renderRankEditorRows();
+  const last = document.getElementById(`re-name-${editorRanks.length - 1}`);
+  if (last) { last.scrollIntoView({ behavior: "smooth", block: "center" }); last.focus(); }
+}
+
+function removeRankRow(i) {
+  if (editorRanks.length <= 1) return;
+  editorRanks = getRankEditorValues();
+  editorRanks.splice(i, 1);
+  editorRanks = editorRanks.map((r, idx) => ({ ...r, id: idx }));
+  renderRankEditorRows();
+}
+
+async function renderRankEditor() {
+  const { data } = await sb.rpc("get_game_config");
+  if (data) applyGameConfig(data);
+  editorRanks = RANKS.map(x => ({ ...x }));
+  renderRankEditorRows();
+}
+
+document.getElementById("add-rank-btn").addEventListener("click", addRankRow);
+
+document.getElementById("rank-save-btn").addEventListener("click", async () => {
+  const btn      = document.getElementById("rank-save-btn");
+  const statusEl = document.getElementById("rank-status");
+  btn.disabled = true;
+  statusEl.className = "status-msg";
+  statusEl.textContent = "Saving…";
+
+  const ranks = getRankEditorValues();
+  const { data: cfgData } = await sb.rpc("get_game_config");
+  const newCfg = { ...(cfgData || {}), ranks };
+
+  const { data, error } = await sb.rpc("set_game_config", { p_user_id: currentUserId, p_config: newCfg });
+  btn.disabled = false;
+
+  if (error || data?.error) {
+    statusEl.className = "status-msg err";
+    statusEl.textContent = error?.message || data?.error || "Failed to save.";
+  } else {
+    applyGameConfig(newCfg);
+    editorRanks = RANKS.map(x => ({ ...x }));
+    statusEl.className = "status-msg ok";
+    statusEl.textContent = "Ranks saved! Live for all players on next login.";
+    setTimeout(() => { statusEl.textContent = ""; }, 4000);
+  }
+});
+
+document.getElementById("rank-reset-btn").addEventListener("click", () => {
+  if (!confirm("Reset ranks to defaults? Any custom ranks will be lost from this editor.")) return;
+  editorRanks = DEFAULT_RANKS.map(x => ({ ...x }));
+  renderRankEditorRows();
+  const s = document.getElementById("rank-status");
+  s.className = "status-msg ok";
+  s.textContent = "Defaults loaded — click Save Ranks to apply.";
+  setTimeout(() => { s.textContent = ""; }, 3500);
+});
+
+// ════════════════════════════════════════════════════════════
+// ADMIN — Server tab (Events editor)
+// ════════════════════════════════════════════════════════════
+let editorEvents = [];
+
+function getEditorEventValues() {
+  return editorEvents.map((ev, i) => ({
+    id:          i,
+    name:        document.getElementById(`ev-name-${i}`)?.value.trim()  || ev.name  || "Event",
+    incomeBonus: (parseFloat(document.getElementById(`ev-bonus-${i}`)?.value) || 0) / 100,
+    startTime:   document.getElementById(`ev-start-${i}`)?.value || ev.startTime || "",
+    endTime:     document.getElementById(`ev-end-${i}`)?.value   || ev.endTime   || "",
+    motd:        document.getElementById(`ev-motd-${i}`)?.value.trim() || "",
+  }));
+}
+
+function getEventEditorStatus(ev) {
+  if (!ev.startTime || !ev.endTime) return null;
+  const n = now();
+  const s = new Date(ev.startTime).getTime();
+  const e = new Date(ev.endTime).getTime();
+  if (n >= s && n <= e) return { label: "🟢 Active",    cls: "active"    };
+  if (n < s)            return { label: "⏳ Scheduled", cls: "scheduled" };
+  return                       { label: "Expired",      cls: "expired"   };
+}
+
+function renderEventEditorRows() {
+  const container = document.getElementById("event-editor");
+  if (editorEvents.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="padding:24px;">No events yet. Click + Add Event to create one.</div>`;
+    return;
+  }
+  container.innerHTML = editorEvents.map((ev, i) => {
+    const st = getEventEditorStatus(ev);
+    return `
+    <div class="event-editor-row">
+      <div class="event-editor-top">
+        <div class="ef">
+          <label>Event Name${st ? ` <span class="ev-status-badge ${st.cls}">${st.label}</span>` : ""}</label>
+          <input type="text" id="ev-name-${i}" value="${escHtml(ev.name)}" maxlength="40" placeholder="e.g. Weekend Bonus">
+        </div>
+        <div class="ef">
+          <label>Bonus (%)</label>
+          <input type="number" id="ev-bonus-${i}" value="${Math.round((ev.incomeBonus||0)*100)}" min="0" step="1" max="1000" placeholder="0">
+        </div>
+        <div class="ef">
+          <label>Start (SGT / local)</label>
+          <input type="datetime-local" id="ev-start-${i}" value="${ev.startTime||''}">
+        </div>
+        <div class="ef">
+          <label>End (SGT / local)</label>
+          <input type="datetime-local" id="ev-end-${i}" value="${ev.endTime||''}">
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="ie-del-btn" onclick="removeEventRow(${i})" title="Remove event">✕</button>
+        </div>
+      </div>
+      <div class="ef">
+        <label>MOTD — message shown to players while this event is active (optional)</label>
+        <input type="text" id="ev-motd-${i}" value="${escHtml(ev.motd||'')}" maxlength="200"
+          placeholder="e.g. 🎉 Weekend event! Earn ${Math.round((ev.incomeBonus||0)*100)}% more income!">
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function addEventRow() {
+  editorEvents = getEditorEventValues();
+  editorEvents.push({ id: editorEvents.length, name: "New Event", incomeBonus: 0.5, startTime: "", endTime: "", motd: "" });
+  renderEventEditorRows();
+  const last = document.getElementById(`ev-name-${editorEvents.length - 1}`);
+  if (last) { last.scrollIntoView({ behavior: "smooth", block: "center" }); last.focus(); }
+}
+
+function removeEventRow(i) {
+  editorEvents = getEditorEventValues();
+  editorEvents.splice(i, 1);
+  editorEvents = editorEvents.map((ev, idx) => ({ ...ev, id: idx }));
+  renderEventEditorRows();
+}
+
+async function renderServerTab() {
+  const { data } = await sb.rpc("get_game_config");
+  if (data) applyGameConfig(data);
+  editorEvents = GAME_EVENTS.map(x => ({ ...x }));
+  renderEventEditorRows();
+  renderEventLivePreview();
+}
+
+function renderEventLivePreview() {
+  const el = document.getElementById("event-live-preview");
+  if (!el) return;
+
+  const now8 = new Date(now() + 8 * 3600000); // SGT
+  const timeStr = now8.toUTCString().replace(" GMT", " SGT").replace(/^.*?, /, "");
+
+  if (GAME_EVENTS.length === 0) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:0.82rem;">No events configured. Add one below.</div>`;
+    return;
+  }
+
+  const active  = getActiveEvents();
+  const bonusPct = getEventBonus() * 100;
+
+  const rows = GAME_EVENTS.map(ev => {
+    const isActive = active.includes(ev);
+    const st = getEventEditorStatus(ev);
+    const badge = st ? `<span class="ev-status-badge ${st.cls}" style="margin-left:6px">${st.label}</span>` : "";
+    const bonus = ev.incomeBonus ? `+${(ev.incomeBonus * 100).toFixed(0)}% income` : "no income bonus";
+    const motd  = ev.motd ? `<span style="color:var(--muted);font-size:0.8rem;"> · MOTD: "${ev.motd}"</span>` : "";
+    return `<div style="padding:4px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+      <strong>${escHtml(ev.name)}</strong>${badge}
+      <span style="color:var(--muted);margin-left:8px;">${bonus}</span>${motd}
+    </div>`;
+  }).join("");
+
+  const activeSummary = active.length > 0
+    ? `<div style="color:var(--green);font-weight:600;margin-bottom:6px;">🟢 ${active.length} event${active.length !== 1 ? "s" : ""} active now — total income bonus: +${bonusPct.toFixed(0)}%</div>`
+    : `<div style="color:var(--muted);font-size:0.82rem;margin-bottom:6px;">No events active right now.</div>`;
+
+  el.innerHTML = `
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px;">Server time: ${escHtml(timeStr)}</div>
+      ${activeSummary}
+      ${rows}
+    </div>`;
+}
+
+document.getElementById("add-event-btn").addEventListener("click", addEventRow);
+
+document.getElementById("event-save-btn").addEventListener("click", async () => {
+  const btn      = document.getElementById("event-save-btn");
+  const statusEl = document.getElementById("event-status");
+  btn.disabled = true;
+  statusEl.className = "status-msg";
+  statusEl.textContent = "Saving…";
+
+  const events = getEditorEventValues();
+  const { data: cfgData } = await sb.rpc("get_game_config");
+  const newCfg = { ...(cfgData || {}), events };
+
+  const { data, error } = await sb.rpc("set_game_config", { p_user_id: currentUserId, p_config: newCfg });
+  btn.disabled = false;
+
+  if (error || data?.error) {
+    statusEl.className = "status-msg err";
+    statusEl.textContent = error?.message || data?.error || "Failed.";
+  } else {
+    applyGameConfig(newCfg);
+    editorEvents = GAME_EVENTS.map(x => ({ ...x }));
+    renderEventEditorRows(); // refresh status badges
+    renderEventLivePreview(); // refresh preview
+    statusEl.className = "status-msg ok";
+    statusEl.textContent = `${events.length} event${events.length !== 1 ? "s" : ""} saved — active events are live now.`;
+    setTimeout(() => { statusEl.textContent = ""; }, 4000);
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+// ADMIN — Accounts management
+// ════════════════════════════════════════════════════════════
+async function loadUsersTable() {
+  document.getElementById("user-count").textContent = "Loading…";
+  document.getElementById("users-container").innerHTML = '<div class="empty-state">Loading…</div>';
+
+  const { data, error } = await sb.rpc("list_users", { p_user_id: currentUserId });
+
+  if (error || data?.error) {
+    document.getElementById("users-container").innerHTML =
+      `<div class="empty-state" style="color:var(--red)">Error: ${error?.message || data?.error}</div>`;
+    document.getElementById("user-count").textContent = "Error";
+    return;
+  }
+
+  const users   = Array.isArray(data) ? data : [];
+  const players = users.filter(u => !u.is_admin);
+  const admins  = users.filter(u => u.is_admin);
+  document.getElementById("user-count").textContent =
+    `${players.length} player${players.length !== 1 ? "s" : ""}${admins.length ? `, ${admins.length} admin${admins.length !== 1 ? "s" : ""}` : ""}`;
+
+  if (users.length === 0) {
+    document.getElementById("users-container").innerHTML = '<div class="empty-state">No accounts yet.</div>';
+    return;
+  }
+
+  function renderRow(u) {
+    const isAdm = !!u.is_admin;
+    if (isAdm) {
+      return `<tr>
+        <td><strong>${escHtml(u.username)}</strong><span class="admin-badge">ADMIN</span></td>
+        <td><span style="color:var(--muted);font-size:0.82rem;">—</span></td>
+        <td class="money-cell">—</td>
+        <td class="time-cell">—</td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn-del" style="border-color:var(--yellow);color:var(--yellow);" onclick="toggleAdminStatus('${u.user_id}','${escHtml(u.username)}',false)">Revoke Admin</button>
+          <button class="btn-del" onclick="confirmDeleteUser('${u.user_id}','${escHtml(u.username)}')">Delete</button>
+        </td>
+      </tr>`;
+    }
+    const rid  = u.rank_id ?? 0;
+    const opts = RANKS.map((r, i) =>
+      `<option value="${i}" ${i === rid ? "selected" : ""}>${r.emoji} ${escHtml(r.name)}</option>`
+    ).join("");
+    return `<tr>
+      <td><strong>${escHtml(u.username)}</strong></td>
+      <td><select class="rank-select" data-uid="${u.user_id}">${opts}</select></td>
+      <td class="money-cell">${u.money != null ? fmt(u.money) : "—"}</td>
+      <td class="time-cell">${u.last_save ? new Date(u.last_save).toLocaleString() : "Never"}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn-del" style="border-color:var(--green);color:var(--green);" onclick="openSetMoney('${u.user_id}','${escHtml(u.username)}',${u.money ?? 0})">Set $</button>
+        <button class="btn-del" style="border-color:var(--yellow);color:var(--yellow);" onclick="confirmResetSave('${u.user_id}','${escHtml(u.username)}')">Reset Save</button>
+        <button class="btn-del" style="border-color:var(--accent);color:var(--accent-hover);" onclick="openResetPw('${u.user_id}','${escHtml(u.username)}')">Reset PW</button>
+        <button class="btn-del" style="border-color:var(--muted);color:var(--muted);" onclick="toggleAdminStatus('${u.user_id}','${escHtml(u.username)}',true)">Make Admin</button>
+        <button class="btn-del" onclick="confirmDeleteUser('${u.user_id}','${escHtml(u.username)}')">Delete</button>
+      </td>
+    </tr>`;
+  }
+
+  document.getElementById("users-container").innerHTML = `
+    <table class="users-tbl">
+      <thead>
+        <tr><th>Username</th><th>Rank</th><th>Money</th><th>Last Active</th><th>Actions</th></tr>
+      </thead>
+      <tbody>${users.map(renderRow).join("")}</tbody>
+    </table>
+  `;
+}
+
+// Rank change handler (delegated, set once)
+document.getElementById("users-container").addEventListener("change", async e => {
+  const sel = e.target.closest(".rank-select");
+  if (!sel) return;
+  const uid    = sel.dataset.uid;
+  const rankId = parseInt(sel.value);
+  sel.style.borderColor = "";
+  const { data, error } = await sb.rpc("admin_set_rank", {
+    p_admin_id:  currentUserId,
+    p_target_id: uid,
+    p_rank_id:   rankId,
+  });
+  if (error || data?.error) {
+    alert("Failed to set rank: " + (error?.message || data?.error));
+    await loadUsersTable();
+  } else {
+    sel.style.borderColor = "var(--green)";
+    setTimeout(() => { if (sel) sel.style.borderColor = ""; }, 1500);
+  }
+});
+
+document.getElementById("refresh-users-btn").addEventListener("click", loadUsersTable);
+
+async function confirmDeleteUser(targetId, targetName) {
+  if (!confirm(`Delete account "${targetName}"?\n\nThis will permanently remove their account and all save data.`)) return;
+  const { data, error } = await sb.rpc("admin_delete_user", {
+    p_admin_id:  currentUserId,
+    p_target_id: targetId,
+  });
+  if (error || data?.error) {
+    alert("Error: " + (error?.message || data?.error));
+  } else {
+    await loadUsersTable();
+  }
+}
+
+// ─── Reset password modal ─────────────────────────────────
+let modalTargetId = null;
+
+function openResetPw(targetId, targetName) {
+  modalTargetId = targetId;
+  document.getElementById("modal-target-name").textContent = targetName;
+  document.getElementById("modal-new-pw").value = "";
+  document.getElementById("modal-error").textContent = "";
+  document.getElementById("reset-pw-modal").classList.add("visible");
+  setTimeout(() => document.getElementById("modal-new-pw").focus(), 50);
+}
+
+document.getElementById("modal-cancel-btn").addEventListener("click", () => {
+  document.getElementById("reset-pw-modal").classList.remove("visible");
+  modalTargetId = null;
+});
+
+document.getElementById("modal-confirm-btn").addEventListener("click", async () => {
+  const pw  = document.getElementById("modal-new-pw").value;
+  const btn = document.getElementById("modal-confirm-btn");
+  if (!pw || pw.length < 6) {
+    document.getElementById("modal-error").textContent = "Password must be at least 6 characters.";
+    return;
+  }
+  btn.disabled = true;
+  const { data, error } = await sb.rpc("admin_reset_password", {
+    p_admin_id:   currentUserId,
+    p_target_id:  modalTargetId,
+    p_new_password: pw,
+  });
+  btn.disabled = false;
+  if (error || data?.error) {
+    document.getElementById("modal-error").textContent = error?.message || data?.error;
+  } else {
+    document.getElementById("reset-pw-modal").classList.remove("visible");
+    modalTargetId = null;
+  }
+});
+
+// ─── Set Player Money ─────────────────────────────────────
+let smTargetId = null;
+
+function openSetMoney(targetId, targetName, currentMoney) {
+  smTargetId = targetId;
+  document.getElementById("sm-target-name").textContent = targetName;
+  document.getElementById("sm-amount").value = Math.floor(currentMoney);
+  document.getElementById("sm-error").textContent = "";
+  document.getElementById("set-money-modal").classList.add("visible");
+  setTimeout(() => document.getElementById("sm-amount").focus(), 50);
+}
+
+document.getElementById("sm-cancel-btn").addEventListener("click", () => {
+  document.getElementById("set-money-modal").classList.remove("visible");
+  smTargetId = null;
+});
+
+document.getElementById("sm-confirm-btn").addEventListener("click", async () => {
+  const amount = parseFloat(document.getElementById("sm-amount").value);
+  const btn    = document.getElementById("sm-confirm-btn");
+  if (isNaN(amount) || amount < 0) {
+    document.getElementById("sm-error").textContent = "Enter a valid amount (0 or more).";
+    return;
+  }
+  btn.disabled = true;
+  const { data, error } = await sb.rpc("admin_set_money", {
+    p_admin_id:  currentUserId,
+    p_target_id: smTargetId,
+    p_money:     amount,
+  });
+  btn.disabled = false;
+  if (error || data?.error) {
+    document.getElementById("sm-error").textContent = error?.message || data?.error;
+  } else {
+    document.getElementById("set-money-modal").classList.remove("visible");
+    smTargetId = null;
+    await loadUsersTable();
+  }
+});
+
+// ─── Reset Player Save ────────────────────────────────────
+async function confirmResetSave(targetId, targetName) {
+  if (!confirm(`Reset save for "${targetName}"?\n\nThis clears all their buildings and money. Their account stays active.`)) return;
+  const { data, error } = await sb.rpc("admin_reset_save", {
+    p_admin_id:  currentUserId,
+    p_target_id: targetId,
+  });
+  if (error || data?.error) {
+    alert("Error: " + (error?.message || data?.error));
+  } else {
+    await loadUsersTable();
+  }
+}
+
+// ─── Toggle Admin Status ──────────────────────────────────
+async function toggleAdminStatus(targetId, targetName, makeAdmin) {
+  const action = makeAdmin ? "make" : "revoke admin for";
+  const warn   = makeAdmin
+    ? `Make "${targetName}" an admin?\n\nThey will have full access to the admin console on next login.`
+    : `Revoke admin for "${targetName}"?\n\nThey will be treated as a regular player on next login.`;
+  if (!confirm(warn)) return;
+  const { data, error } = await sb.rpc("admin_set_admin", {
+    p_admin_id:  currentUserId,
+    p_target_id: targetId,
+    p_is_admin:  makeAdmin,
+  });
+  if (error || data?.error) {
+    alert("Error: " + (error?.message || data?.error));
+  } else {
+    const msg = makeAdmin
+      ? `✅ "${targetName}" is now an admin. They'll have admin access on next login.`
+      : `✅ Admin access revoked for "${targetName}".`;
+    showAdminToast(msg);
+    await loadUsersTable();
+  }
+}
+
+function showAdminToast(msg) {
+  let toast = document.getElementById("admin-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "admin-toast";
+    toast.style.cssText = "position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;padding:10px 20px;border-radius:8px;font-weight:600;font-size:0.9rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:opacity .3s;";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = "1";
+  clearTimeout(toast._to);
+  toast._to = setTimeout(() => { toast.style.opacity = "0"; }, 3500);
+}
+
+// ════════════════════════════════════════════════════════════
+// EMOJI PICKER
+// ════════════════════════════════════════════════════════════
+const EMOJI_CATEGORIES = [
+  { label: "Rank & Awards",  emojis: ["🪪","💼","📊","🏢","🎯","👑","⭐","🌟","💫","🏅","🥇","🥈","🥉","🎖️","🏆","🎗️","🔰","💎","👔","🤴","👸","🧑‍💼","🥋","🎓"] },
+  { label: "Business",       emojis: ["💰","💵","💴","💶","💷","💸","🏦","📈","📉","📋","📌","📎","🖊️","📝","🗂️","🗃️","📂","🗓️","🤝","📣","📢","🔔","🧾","💹","🪙"] },
+  { label: "Technology",     emojis: ["💻","🖥️","📱","⌨️","🖱️","💾","💿","📡","🔌","🔋","⚡","🤖","🛰️","📟","📠","🖨️","📷","📸","🎮","🕹️"] },
+  { label: "Buildings",      emojis: ["🏠","🏡","🏢","🏣","🏤","🏥","🏦","🏨","🏪","🏫","🏬","🏭","🏯","🏰","🗼","🏗️","🏘️","⛪","🕌","🛖"] },
+  { label: "Transport",      emojis: ["🚀","🛸","✈️","🚂","🚗","🛳️","🚁","🚢","🛥️","🚤","🏎️","🛶","🚀","🛺","🚌","🚎","🏍️","🚲","⛵","🛩️"] },
+  { label: "Industry",       emojis: ["⚙️","🔧","🔨","🪛","🔩","⛏️","🪚","🔑","🗝️","🔒","🛡️","⚔️","🪓","🛢️","⛽","⚗️","🧪","🔬","🔭","🪝","🧲","🪤"] },
+  { label: "Nature",         emojis: ["🌱","🌿","🍀","🌺","🌸","🌻","🌙","☀️","🌊","🔥","💧","🌍","🌋","⛰️","🏔️","🌾","🌵","🌴","❄️","🌈","⛅","🌪️"] },
+  { label: "Food & Economy", emojis: ["🍋","🥐","🍕","☕","🍺","🍾","🎂","🛢️","⛽","🌾","🐄","🐖","🐟","🦐","🌽","🍯","🥩","🧀","🍷","🥂"] },
+  { label: "Symbols",        emojis: ["❤️","💜","💙","💚","💛","🧡","❤️‍🔥","✨","💥","🎆","🎇","🎉","🎊","🎁","🎀","🎈","🔮","💡","🗺️","📍","🚩","🏁"] },
+];
+
+let pickerBtnId = null;
+let pickerInpId = null;
+
+(function initEmojiPicker() {
+  const panel = document.getElementById("emoji-picker-panel");
+  panel.innerHTML = EMOJI_CATEGORIES.map(cat => `
+    <span class="ep-cat-label">${cat.label}</span>
+    <div class="ep-cat-grid">
+      ${cat.emojis.map(e => `<button type="button" class="ep-item" data-emoji="${e}">${e}</button>`).join("")}
+    </div>
+  `).join("");
+
+  panel.addEventListener("click", e => {
+    const btn = e.target.closest(".ep-item");
+    if (btn) selectEmoji(btn.dataset.emoji);
+  });
+
+  document.addEventListener("click", e => {
+    if (!pickerBtnId) return;
+    if (!panel.contains(e.target) && !e.target.closest(".emoji-btn")) closeEmojiPicker();
+  });
+})();
+
+function toggleEmojiPicker(btnId, inpId) {
+  const panel = document.getElementById("emoji-picker-panel");
+  if (pickerBtnId === btnId && panel.style.display !== "none") { closeEmojiPicker(); return; }
+
+  if (pickerBtnId) document.getElementById(pickerBtnId)?.classList.remove("ep-active");
+  pickerBtnId = btnId;
+  pickerInpId = inpId;
+
+  const btn  = document.getElementById(btnId);
+  btn.classList.add("ep-active");
+  panel.style.display = "block";
+
+  const rect = btn.getBoundingClientRect();
+  let top  = rect.bottom + 6;
+  let left = rect.left;
+  if (left + 280 > window.innerWidth)  left = window.innerWidth  - 280;
+  if (top  + 278 > window.innerHeight) top  = rect.top - 278;
+  panel.style.top  = top  + "px";
+  panel.style.left = left + "px";
+}
+
+function closeEmojiPicker() {
+  document.getElementById("emoji-picker-panel").style.display = "none";
+  if (pickerBtnId) document.getElementById(pickerBtnId)?.classList.remove("ep-active");
+  pickerBtnId = null;
+  pickerInpId = null;
+}
+
+function selectEmoji(emoji) {
+  if (!pickerBtnId) return;
+  const inp = document.getElementById(pickerInpId);
+  if (inp) inp.value = emoji;
+  const btn = document.getElementById(pickerBtnId);
+  if (btn) { const span = btn.querySelector(".ep-emoji"); if (span) span.textContent = emoji; }
+  closeEmojiPicker();
+}
+
+// ════════════════════════════════════════════════════════════
+// CHANGELOG
+// ════════════════════════════════════════════════════════════
+const CHANGELOG = [
+  {
+    version: "v0.3",
+    date: "2026-03-23",
+    time: "14:00 SGT",
+    changes: [
+      "Added animated business-theme background across all screens",
+      "Added live server stats on login page (SGT server time, active accounts, cost multiplier, idle cap)",
+      "Added leaderboard — see the top 20 richest players on the server",
+      "Added version number and this changelog",
+    ],
+  },
+  {
+    version: "v0.2",
+    date: "2026-03-22",
+    time: "20:00 SGT",
+    changes: [
+      "Added player rank system: Intern → Associate → Manager → Director → VP → CEO",
+      "Each rank provides an income multiplier bonus and extra offline earning hours",
+      "Your current rank badge is now shown in the game header",
+    ],
+  },
+  {
+    version: "v0.1",
+    date: "2026-03-21",
+    time: "18:00 SGT",
+    changes: [
+      "Initial launch — build industries and earn money passively",
+      "Cloud save syncs your progress automatically every 5 ticks",
+      "Offline income accrues while you're away, up to the idle cap",
+      "Reset game option available at the bottom of the screen",
+    ],
+  },
+];
+
+function openChangelog() {
+  const content = document.getElementById("changelog-content");
+  content.innerHTML = CHANGELOG.map(entry => `
+    <div class="cl-entry">
+      <div class="cl-header">
+        <span class="cl-ver-tag">${entry.version}</span>
+        <span class="cl-date">${entry.date} · ${entry.time}</span>
+      </div>
+      <ul class="cl-items">
+        ${entry.changes.map(c => `<li>${escHtml(c)}</li>`).join("")}
+      </ul>
+    </div>
+  `).join("");
+  document.getElementById("changelog-modal").classList.add("visible");
+}
+
+document.getElementById("changelog-close-btn").addEventListener("click", () => {
+  document.getElementById("changelog-modal").classList.remove("visible");
+});
+
+// Close changelog on backdrop click
+document.getElementById("changelog-modal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove("visible");
+});
+
+// ════════════════════════════════════════════════════════════
+// LEADERBOARD
+// ════════════════════════════════════════════════════════════
+async function loadLeaderboard() {
+  const content = document.getElementById("leaderboard-content");
+  content.innerHTML = '<div class="lb-empty">Loading…</div>';
+
+  const { data, error } = await sb.rpc("get_leaderboard");
+  const rows = Array.isArray(data) ? data : [];
+
+  if (error || rows.length === 0) {
+    content.innerHTML = '<div class="lb-empty">No data yet — be the first on the board!</div>';
+    return;
+  }
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const myName = currentUsername?.toLowerCase();
+  const inTop  = rows.some(r => r.username?.toLowerCase() === myName);
+
+  content.innerHTML = `
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th class="lb-pos">#</th>
+          <th>Player</th>
+          <th>Rank</th>
+          <th class="lb-money">Net Worth</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map((row, i) => {
+          const rank  = RANKS[row.rank_id] || RANKS[0];
+          const pos   = medals[i] ?? (i + 1);
+          const isMe  = row.username?.toLowerCase() === myName;
+          return `<tr class="${isMe ? "lb-you" : ""}">
+            <td class="lb-pos">${pos}</td>
+            <td><strong>${escHtml(row.username)}</strong>${isMe ? '<span class="lb-you-tag">You</span>' : ""}</td>
+            <td>${rank.emoji} ${escHtml(rank.name)}</td>
+            <td class="lb-money">${fmt(row.money ?? 0)}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+    ${!inTop && myName ? `<div class="lb-not-ranked">You are not in the top 20 yet — keep earning!</div>` : ""}
+  `;
+}
+
+function openLeaderboard() {
+  document.getElementById("leaderboard-modal").classList.add("visible");
+  loadLeaderboard();
+}
+
+document.getElementById("lb-close-btn").addEventListener("click", () => {
+  document.getElementById("leaderboard-modal").classList.remove("visible");
+});
+document.getElementById("lb-refresh-btn").addEventListener("click", loadLeaderboard);
+document.getElementById("leaderboard-btn").addEventListener("click", openLeaderboard);
+
+// Close leaderboard on backdrop click
+document.getElementById("leaderboard-modal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove("visible");
+});
+
+// ─── Utility ──────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ─── Init ─────────────────────────────────────────────────
+async function init() {
+  initBgCanvas();
+  await syncServerTime();
+  await loadGameConfig();
+  const session = loadSession();
+  if (session?.userId && session?.username) {
+    if (session.isAdmin) {
+      await onAdminLogin(session.userId, session.username);
+    } else {
+      await onLogin(session.userId, session.username);
+    }
+  } else {
+    showAuth();
+  }
+}
+
+init();
+
+/* ── NEW SQL TO RUN IN SUPABASE DASHBOARD ────────────────────────
+   Run each block separately in the SQL editor.
+
+   9. Toggle admin status for a user:
+   CREATE OR REPLACE FUNCTION public.admin_set_admin(p_admin_id uuid, p_target_id uuid, p_is_admin boolean)
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   DECLARE v_is_admin boolean;
+   BEGIN
+     SELECT is_admin INTO v_is_admin FROM "IDI_Accounts".profiles WHERE user_id = p_admin_id;
+     IF NOT v_is_admin THEN RETURN jsonb_build_object('error', 'Unauthorized'); END IF;
+     IF p_admin_id = p_target_id THEN RETURN jsonb_build_object('error', 'Cannot change your own admin status'); END IF;
+     UPDATE "IDI_Accounts".profiles SET is_admin = p_is_admin WHERE user_id = p_target_id;
+     RETURN jsonb_build_object('ok', true);
+   END;$$;
+   GRANT EXECUTE ON FUNCTION public.admin_set_admin(uuid, uuid, boolean) TO authenticated;
+
+   Update list_users to include all accounts (except self) with is_admin flag:
+   CREATE OR REPLACE FUNCTION public.list_users(p_user_id uuid)
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   DECLARE v_is_admin boolean;
+   BEGIN
+     SELECT is_admin INTO v_is_admin FROM "IDI_Accounts".profiles WHERE user_id = p_user_id;
+     IF NOT v_is_admin THEN RETURN jsonb_build_object('error', 'Unauthorized'); END IF;
+     RETURN (
+       SELECT jsonb_agg(jsonb_build_object(
+         'user_id',  p.user_id,
+         'username', p.username,
+         'is_admin', p.is_admin,
+         'rank_id',  COALESCE(p.rank_id, 0),
+         'money',    gs.money,
+         'last_save', gs.last_save
+       ) ORDER BY p.is_admin DESC, p.username)
+       FROM "IDI_Accounts".profiles p
+       LEFT JOIN "IDI_Accounts".game_saves gs ON gs.user_id = p.user_id
+       WHERE p.user_id != p_user_id
+     );
+   END;$$;
+
+   7. Admin set player money:
+   CREATE OR REPLACE FUNCTION public.admin_set_money(p_admin_id uuid, p_target_id uuid, p_money float8)
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   DECLARE v_is_admin boolean;
+   BEGIN
+     SELECT is_admin INTO v_is_admin FROM "IDI_Accounts".profiles WHERE user_id = p_admin_id;
+     IF NOT v_is_admin THEN RETURN jsonb_build_object('error', 'Unauthorized'); END IF;
+     UPDATE "IDI_Accounts".game_saves SET money = p_money WHERE user_id = p_target_id;
+     IF NOT FOUND THEN
+       INSERT INTO "IDI_Accounts".game_saves (user_id, money, owned, last_save)
+       VALUES (p_target_id, p_money, '[]', extract(epoch from now()) * 1000);
+     END IF;
+     RETURN jsonb_build_object('ok', true);
+   END;$$;
+
+   8. Admin reset player save (wipes save, keeps account):
+   CREATE OR REPLACE FUNCTION public.admin_reset_save(p_admin_id uuid, p_target_id uuid)
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   DECLARE v_is_admin boolean;
+   BEGIN
+     SELECT is_admin INTO v_is_admin FROM "IDI_Accounts".profiles WHERE user_id = p_admin_id;
+     IF NOT v_is_admin THEN RETURN jsonb_build_object('error', 'Unauthorized'); END IF;
+     DELETE FROM "IDI_Accounts".game_saves WHERE user_id = p_target_id;
+     RETURN jsonb_build_object('ok', true);
+   END;$$;
+
+   6. Leaderboard (anon-accessible, top 20 players by money):
+   CREATE OR REPLACE FUNCTION public.get_leaderboard()
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   BEGIN
+     RETURN (
+       SELECT COALESCE(jsonb_agg(
+         jsonb_build_object('username', username, 'money', money, 'rank_id', rank_id)
+       ), '[]'::jsonb)
+       FROM (
+         SELECT p.username, COALESCE(gs.money, 0) AS money, COALESCE(p.rank_id, 0) AS rank_id
+         FROM "IDI_Accounts".profiles p
+         LEFT JOIN "IDI_Accounts".game_saves gs ON gs.user_id = p.user_id
+         WHERE NOT p.is_admin
+         ORDER BY money DESC
+         LIMIT 20
+       ) t
+     );
+   END;$$;
+   GRANT EXECUTE ON FUNCTION public.get_leaderboard() TO anon, authenticated;
+
+   5. Public stats (for login page):
+   CREATE OR REPLACE FUNCTION public.get_public_stats()
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   DECLARE v_count integer; v_cfg jsonb;
+   BEGIN
+     SELECT COUNT(*) INTO v_count FROM "IDI_Accounts".profiles WHERE NOT is_admin;
+     SELECT config INTO v_cfg FROM "IDI_Accounts".game_config LIMIT 1;
+     RETURN jsonb_build_object(
+       'player_count',      v_count,
+       'cost_scale',        COALESCE((v_cfg->>'costScale')::float,        1.15),
+       'max_offline_hours', COALESCE((v_cfg->>'maxOfflineHours')::float,  2)
+     );
+   END;$$;
+   GRANT EXECUTE ON FUNCTION public.get_public_stats() TO anon, authenticated;
+
+   1. Add rank column to profiles:
+   ALTER TABLE "IDI_Accounts".profiles ADD COLUMN IF NOT EXISTS rank_id integer DEFAULT 0;
+
+   2. Update list_users to include rank_id:
+   CREATE OR REPLACE FUNCTION public.list_users(p_user_id uuid)
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   DECLARE v_is_admin boolean;
+   BEGIN
+     SELECT is_admin INTO v_is_admin FROM "IDI_Accounts".profiles WHERE user_id = p_user_id;
+     IF NOT v_is_admin THEN RETURN jsonb_build_object('error', 'Unauthorized'); END IF;
+     RETURN (
+       SELECT jsonb_agg(jsonb_build_object(
+         'user_id', p.user_id, 'username', p.username,
+         'rank_id', COALESCE(p.rank_id, 0),
+         'money', gs.money, 'last_save', gs.last_save
+       ) ORDER BY p.username)
+       FROM "IDI_Accounts".profiles p
+       LEFT JOIN "IDI_Accounts".game_saves gs ON gs.user_id = p.user_id
+       WHERE NOT p.is_admin
+     );
+   END;$$;
+
+   3. Update load_game to return rank_id:
+   CREATE OR REPLACE FUNCTION public.load_game(p_user_id uuid)
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   DECLARE v_save "IDI_Accounts".game_saves%ROWTYPE; v_rank integer;
+   BEGIN
+     SELECT rank_id INTO v_rank FROM "IDI_Accounts".profiles WHERE user_id = p_user_id;
+     SELECT * INTO v_save FROM "IDI_Accounts".game_saves WHERE user_id = p_user_id;
+     IF NOT FOUND THEN RETURN NULL; END IF;
+     RETURN jsonb_build_object(
+       'money', v_save.money, 'owned', v_save.owned,
+       'last_save', extract(epoch from v_save.last_save) * 1000,
+       'rank_id', COALESCE(v_rank, 0)
+     );
+   END;$$;
+   GRANT EXECUTE ON FUNCTION public.load_game(uuid) TO anon, authenticated;
+
+   4. Create admin_set_rank:
+   CREATE OR REPLACE FUNCTION public.admin_set_rank(p_admin_id uuid, p_target_id uuid, p_rank_id integer)
+   RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+   DECLARE v_is_admin boolean;
+   BEGIN
+     SELECT is_admin INTO v_is_admin FROM "IDI_Accounts".profiles WHERE user_id = p_admin_id;
+     IF NOT v_is_admin THEN RETURN jsonb_build_object('error', 'Unauthorized'); END IF;
+     UPDATE "IDI_Accounts".profiles SET rank_id = p_rank_id WHERE user_id = p_target_id AND NOT is_admin;
+     RETURN jsonb_build_object('ok', true);
+   END;$$;
+   GRANT EXECUTE ON FUNCTION public.admin_set_rank(uuid, uuid, integer) TO anon, authenticated;
+*/
+</script>
+</body>
+</html>
