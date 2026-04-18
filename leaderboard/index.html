@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard — PawieGames</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22223a;
+    --accent: #6c63ff;
+    --accent-hover: #857df8;
+    --text: #e8e8f0;
+    --muted: #888899;
+    --green: #4caf8a;
+    --yellow: #f0c040;
+    --red: #e05070;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  header {
+    display: flex; align-items: center; gap: 1rem;
+    padding: .75rem 2rem; background: var(--surface); border-bottom: 1px solid var(--surface2);
+  }
+  header a { color: var(--muted); text-decoration: none; font-size: .8rem; font-weight: 600; transition: color .15s; white-space: nowrap; }
+  header a:hover { color: var(--text); }
+  header h1 { font-size: 1.1rem; font-weight: 800; }
+  header h1 span { color: var(--accent); }
+
+  main { max-width: 640px; width: 100%; margin: 2rem auto; padding: 0 1.5rem; }
+
+  .lb-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;
+  }
+  .lb-title { font-size: 1.2rem; font-weight: 800; }
+  .lb-game-label { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+
+  .lb-tabs { display: flex; gap: .5rem; margin-bottom: 1.25rem; }
+  .lb-tab {
+    background: var(--surface); border: 1px solid var(--surface2); color: var(--muted);
+    border-radius: 8px; padding: 6px 16px; font-size: .8rem; font-weight: 600; cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .lb-tab.active { border-color: var(--accent); color: var(--accent); }
+
+  .lb-box { background: var(--surface); border: 1px solid var(--surface2); border-radius: 14px; overflow: hidden; }
+
+  .lb-table { width: 100%; border-collapse: collapse; }
+  .lb-table th {
+    text-align: left; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--surface2);
+    background: var(--surface);
+  }
+  .lb-table td { padding: 11px 14px; font-size: .875rem; border-bottom: 1px solid #1e1e2e; }
+  .lb-table tr:last-child td { border-bottom: none; }
+  .lb-table tr:hover td { background: rgba(255,255,255,.02); }
+  .lb-table tr.lb-you td { background: rgba(108,99,255,.08); }
+
+  .lb-pos { color: var(--muted); font-size: .82rem; width: 36px; text-align: center; }
+  .lb-money { color: var(--yellow); font-weight: 700; text-align: right; }
+
+  .lb-you-tag {
+    font-size: .65rem; font-weight: 700; color: var(--accent-hover);
+    background: rgba(108,99,255,.15); border: 1px solid rgba(108,99,255,.3);
+    border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  }
+  .lb-empty { text-align: center; color: var(--muted); padding: 48px; font-size: .88rem; }
+  .lb-not-ranked {
+    font-size: .8rem; color: var(--muted); text-align: center;
+    padding: 12px; border-top: 1px solid var(--surface2);
+  }
+
+  .btn-refresh {
+    background: none; border: 1px solid var(--surface2); color: var(--muted);
+    border-radius: 8px; padding: 6px 14px; font-size: .8rem; font-weight: 600;
+    cursor: pointer; transition: border-color .15s, color .15s;
+  }
+  .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-refresh:disabled { opacity: .4; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<header>
+  <a href="../">← Games</a>
+  <h1>Pawie<span>Games</span> — Leaderboard</h1>
+</header>
+<main>
+  <div class="lb-header">
+    <div>
+      <div class="lb-title">🏆 Top Players</div>
+      <div class="lb-game-label">Idle Industry</div>
+    </div>
+    <button class="btn-refresh" id="btn-refresh">↻ Refresh</button>
+  </div>
+  <div class="lb-box">
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th class="lb-pos">#</th>
+          <th>Player</th>
+          <th>Rank</th>
+          <th class="lb-money">Net Worth</th>
+        </tr>
+      </thead>
+      <tbody id="lb-body">
+        <tr><td colspan="4" class="lb-empty">Loading…</td></tr>
+      </tbody>
+    </table>
+    <div id="lb-not-ranked" style="display:none" class="lb-not-ranked">
+      You are not in the top 20 yet — keep earning!
+    </div>
+  </div>
+</main>
+<script>
+const SUPABASE_URL      = "https://fwawlsbjltgvcpyezciw.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_cWfZRmHb55YMA-wa7hb6rw_qP6dIuYi";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const RANKS = [
+  { name: "Intern",    emoji: "🪪" },
+  { name: "Associate", emoji: "💼" },
+  { name: "Manager",   emoji: "📊" },
+  { name: "Director",  emoji: "🏢" },
+  { name: "VP",        emoji: "🎯" },
+  { name: "CEO",       emoji: "👑" },
+];
+
+const MEDALS = ["🥇", "🥈", "🥉"];
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function fmt(n) {
+  if (n >= 1e12) return "$" + (n / 1e12).toFixed(2) + "T";
+  if (n >= 1e9)  return "$" + (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6)  return "$" + (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3)  return "$" + (n / 1e3).toFixed(1) + "K";
+  return "$" + Math.floor(n);
+}
+
+let myName = null;
+try {
+  const s = JSON.parse(localStorage.getItem("pg_session"));
+  myName = s?.username?.toLowerCase() || null;
+} catch {}
+
+async function loadLeaderboard() {
+  const btn  = document.getElementById("btn-refresh");
+  const body = document.getElementById("lb-body");
+  const notRanked = document.getElementById("lb-not-ranked");
+  btn.disabled = true;
+  body.innerHTML = '<tr><td colspan="4" class="lb-empty">Loading…</td></tr>';
+  notRanked.style.display = "none";
+
+  const { data, error } = await sb.rpc("get_leaderboard");
+  const rows = Array.isArray(data) ? data : [];
+  btn.disabled = false;
+
+  if (error || rows.length === 0) {
+    body.innerHTML = '<tr><td colspan="4" class="lb-empty">No data yet — be the first on the board!</td></tr>';
+    return;
+  }
+
+  const inTop = rows.some(r => r.username?.toLowerCase() === myName);
+  body.innerHTML = rows.map((row, i) => {
+    const rank = RANKS[row.rank_id] || RANKS[0];
+    const pos  = MEDALS[i] ?? (i + 1);
+    const isMe = row.username?.toLowerCase() === myName;
+    return `<tr class="${isMe ? "lb-you" : ""}">
+      <td class="lb-pos">${pos}</td>
+      <td><strong>${escHtml(row.username)}</strong>${isMe ? '<span class="lb-you-tag">You</span>' : ""}</td>
+      <td>${rank.emoji} ${escHtml(rank.name)}</td>
+      <td class="lb-money">${fmt(row.money ?? 0)}</td>
+    </tr>`;
+  }).join("");
+
+  notRanked.style.display = (!inTop && myName) ? "" : "none";
+}
+
+document.getElementById("btn-refresh").addEventListener("click", loadLeaderboard);
+loadLeaderboard();
+</script>
+</body>
+</html>
