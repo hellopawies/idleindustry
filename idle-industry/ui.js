@@ -314,7 +314,6 @@ document.getElementById("lb-close-btn").addEventListener("click", () => {
   document.getElementById("leaderboard-modal").classList.remove("visible");
 });
 document.getElementById("lb-refresh-btn").addEventListener("click", loadLeaderboard);
-document.getElementById("leaderboard-btn").addEventListener("click", openLeaderboard);
 document.getElementById("leaderboard-modal").addEventListener("click", e => {
   if (e.target === e.currentTarget) e.currentTarget.classList.remove("visible");
 });
