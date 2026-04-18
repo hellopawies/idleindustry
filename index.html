@@ -83,6 +83,8 @@
     transition: border-color .15s, color .15s;
   }
   #signout-btn:hover { border-color: var(--red); color: var(--red); }
+  #lb-nav-btn { color: var(--muted); text-decoration: none; font-size: .85rem; font-weight: 600; transition: color .15s; }
+  #lb-nav-btn:hover { color: var(--yellow); }
   main { flex: 1; max-width: 900px; width: 100%; margin: 2rem auto; padding: 0 1.5rem; }
   .section-label { font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
   .games-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem; }
@@ -129,6 +131,7 @@
       <h1>Pawie<span>Games</span></h1>
     </div>
     <div class="hub-user">
+      <a href="./leaderboard/" id="lb-nav-btn">🏆 Leaderboard</a>
       <span id="hub-username"></span>
       <button id="signout-btn">Sign out</button>
     </div>
@@ -158,22 +161,7 @@
         </div>
       </a>
     </div>
-    <div style="margin-top:2rem">
-      <div class="section-label">Community</div>
-      <div class="games-grid">
-        <a href="./leaderboard/" class="game-card">
-          <div class="card-icon">🏆</div>
-          <div>
-            <div class="card-title">Leaderboard</div>
-            <div class="card-desc">See how you stack up against other players. Top earners in Idle Industry.</div>
-          </div>
-          <div style="margin-top:auto">
-            <span class="card-tag" style="background:rgba(240,192,64,.15);color:var(--yellow)">Live</span>
-          </div>
-        </a>
-      </div>
-    </div>
-    <div id="admin-section" style="display:none">
+<div id="admin-section" style="display:none">
       <div class="section-label" style="margin-top:2rem">Admin</div>
       <div class="games-grid">
         <a href="./idle-industry/" class="game-card admin-card" id="admin-card-link">
