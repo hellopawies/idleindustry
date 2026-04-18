@@ -46,4 +46,4 @@ let IDLE_MULTIPLIER = DEFAULT_IDLE_MULTIPLIER;
 let STARTING_MONEY  = 10;
 let GAME_EVENTS     = [];
 
-const SESSION_KEY = "idi_session";
+const SESSION_KEY = "pg_session";

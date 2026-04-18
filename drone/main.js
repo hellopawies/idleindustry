@@ -1,3 +1,9 @@
+// ── Session check ─────────────────────────────────────────────
+try {
+  const _s = JSON.parse(localStorage.getItem("pg_session"));
+  if (!_s?.userId || !_s?.username) window.location.replace('../');
+} catch { window.location.replace('../'); }
+
 // ── Toolbar event listeners ───────────────────────────────────
 
 document.getElementById('btn-run').addEventListener('click', runCode);

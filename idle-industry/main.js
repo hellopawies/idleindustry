@@ -27,19 +27,19 @@ function initIcons() {
 
 // ── Init ──────────────────────────────────────────────────
 async function init() {
-  initBgCanvas();
   initIcons();
   await syncServerTime();
-  await loadGameConfig();
+
   const session = loadSession();
-  if (session?.userId && session?.username) {
-    if (session.isAdmin) {
-      await onAdminLogin(session.userId, session.username);
-    } else {
-      await onLogin(session.userId, session.username);
-    }
+  if (!session?.userId || !session?.username) {
+    window.location.href = '../';
+    return;
+  }
+
+  if (session.isAdmin) {
+    await onAdminLogin(session.userId, session.username);
   } else {
-    showAuth();
+    await onLogin(session.userId, session.username);
   }
 }
 

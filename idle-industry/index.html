@@ -13,57 +13,6 @@
 </head>
 <body>
 
-<!-- Global animated background (fixed, behind all screens) -->
-<canvas id="bg-canvas"></canvas>
-
-<!-- ── Auth screen ── -->
-<div id="auth-screen">
-  <div id="back-banner">
-    <a href="../">← PawieGames</a>
-  </div>
-  <div id="auth-card">
-    <div class="logo">Idle <span>Industry</span><span class="version-tag" style="vertical-align:middle;margin-left:6px;cursor:default;pointer-events:none;">v0.8.0</span></div>
-    <div class="tagline">Build your empire. No email required.</div>
-    <div id="auth-title">Sign in</div>
-    <div class="field">
-      <label>Username</label>
-      <input type="text" id="auth-username" placeholder="Username"
-             autocomplete="username" maxlength="20" spellcheck="false">
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password">
-    </div>
-    <div id="auth-error"></div>
-    <button id="auth-submit">Sign in</button>
-    <div id="auth-toggle">No account? <a id="auth-switch">Sign up</a></div>
-  </div>
-
-  <!-- Live server stats -->
-  <div id="login-stats">
-    <div class="ls-item">
-      <div class="ls-label">Server Time</div>
-      <div class="ls-value" id="ls-time">--:--:--</div>
-    </div>
-    <div class="ls-item">
-      <div class="ls-label">Active Accounts</div>
-      <div class="ls-value" id="ls-accounts">—</div>
-    </div>
-    <div class="ls-item">
-      <div class="ls-label">Cost Multiplier</div>
-      <div class="ls-value" id="ls-multiplier">—</div>
-    </div>
-    <div class="ls-item">
-      <div class="ls-label">Idle Cap</div>
-      <div class="ls-value" id="ls-idle">—</div>
-    </div>
-    <div class="ls-item">
-      <div class="ls-label">Idle Bonus</div>
-      <div class="ls-value" id="ls-idle-mult">—</div>
-    </div>
-  </div>
-</div>
-
 <!-- ── Game screen ── -->
 <div id="game-screen">
   <div id="motd-banner" style="display:none;">
@@ -74,6 +23,7 @@
     </div>
   </div>
   <div id="header">
+    <a class="hdr-back" href="../">← Games</a>
     <h1>Idle <span>Industry</span><button class="version-tag" onclick="openChangelog()">v0.8.0</button></h1>
     <div id="stats">
       <div id="money-display">$0.00</div>
@@ -110,6 +60,7 @@
 <div id="admin-screen">
   <div id="admin-header">
     <div class="admin-brand">
+      <a class="hdr-back" href="../">← Games</a>
       Idle Industry <span class="badge">Admin</span><button class="version-tag" onclick="openChangelog()" style="margin-left:10px;">v0.8.0</button>
     </div>
     <div id="admin-user-area">

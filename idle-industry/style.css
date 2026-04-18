@@ -661,6 +661,10 @@ table.users-tbl .time-cell  { color: var(--muted); font-size: 0.8rem; }
 .bm-btn:hover  { border-color: var(--accent); color: var(--text); }
 .bm-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
+/* ── Back-to-hub link (in game and admin headers) ── */
+.hdr-back { color: var(--muted); text-decoration: none; font-size: .8rem; font-weight: 600; transition: color 0.15s; white-space: nowrap; }
+.hdr-back:hover { color: var(--text); }
+
 /* ── Back-to-hub banner (auth screen only) ── */
 #back-banner {
   position: absolute;

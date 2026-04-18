@@ -1,59 +1,17 @@
 // ── Screen switching ──────────────────────────────────────────
 function showScreen(id) {
-  ["auth-screen", "game-screen", "admin-screen"].forEach(s => {
+  ["game-screen", "admin-screen"].forEach(s => {
     document.getElementById(s).classList.toggle("visible", s === id);
   });
 }
 function showGame(username) {
-  stopLoginStats();
   document.getElementById("username-display").textContent = username;
   showScreen("game-screen");
   updateEventBanner();
 }
 function showAdmin(username) {
-  stopLoginStats();
   document.getElementById("admin-username-display").textContent = username;
   showScreen("admin-screen");
-}
-function showAuth() {
-  showScreen("auth-screen");
-  startLoginStats();
-  setTimeout(() => document.getElementById("auth-username").focus(), 50);
-}
-
-// ── Login page live stats ─────────────────────────────────────
-let loginStatsInterval = null;
-
-function stopLoginStats() {
-  if (loginStatsInterval) { clearInterval(loginStatsInterval); loginStatsInterval = null; }
-}
-
-async function startLoginStats() {
-  stopLoginStats();
-
-  function tick() {
-    const t  = new Date(now() + 8 * 3600000);
-    const hh = String(t.getUTCHours()).padStart(2, "0");
-    const mm = String(t.getUTCMinutes()).padStart(2, "0");
-    const ss = String(t.getUTCSeconds()).padStart(2, "0");
-    const el = document.getElementById("ls-time");
-    if (el) el.textContent = `${hh}:${mm}:${ss} SGT`;
-  }
-  tick();
-  loginStatsInterval = setInterval(tick, 1000);
-
-  document.getElementById("ls-multiplier").textContent = COST_SCALE + "×";
-  document.getElementById("ls-idle").textContent       = (MAX_OFFLINE / 3600).toFixed(1) + "h";
-  document.getElementById("ls-idle-mult").textContent  = IDLE_MULTIPLIER + "×";
-
-  const { data } = await sb.rpc("get_public_stats");
-  if (data) {
-    const el = document.getElementById("ls-accounts");
-    if (el) el.textContent = data.player_count ?? "—";
-    if (data.cost_scale)        { document.getElementById("ls-multiplier").textContent = data.cost_scale + "×"; }
-    if (data.max_offline_hours) { document.getElementById("ls-idle").textContent       = data.max_offline_hours + "h"; }
-    if (data.idle_multiplier)   { document.getElementById("ls-idle-mult").textContent  = data.idle_multiplier + "×"; }
-  }
 }
 
 // ── Animated background canvas ────────────────────────────────
