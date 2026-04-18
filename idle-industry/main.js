@@ -36,7 +36,9 @@ async function init() {
     return;
   }
 
-  const isAdminMode = session.isAdmin && new URLSearchParams(location.search).has('admin');
+  const adminFlag = sessionStorage.getItem("pg_admin_mode") === "1";
+  sessionStorage.removeItem("pg_admin_mode");
+  const isAdminMode = session.isAdmin && adminFlag;
   if (isAdminMode) {
     await onAdminLogin(session.userId, session.username);
   } else {

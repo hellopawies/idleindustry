@@ -161,7 +161,7 @@
     <div id="admin-section" style="display:none">
       <div class="section-label" style="margin-top:2rem">Admin</div>
       <div class="games-grid">
-        <a href="./idle-industry/?admin" class="game-card admin-card">
+        <a href="./idle-industry/" class="game-card admin-card" id="admin-card-link">
           <div class="card-icon">⚙️</div>
           <div>
             <div class="card-title">Idle Industry Admin</div>
@@ -271,6 +271,12 @@ document.getElementById("auth-password").addEventListener("keydown", e => {
 document.getElementById("signout-btn").addEventListener("click", () => {
   clearSession();
   showAuth();
+});
+
+document.getElementById("admin-card-link").addEventListener("click", e => {
+  e.preventDefault();
+  sessionStorage.setItem("pg_admin_mode", "1");
+  window.location.href = "./idle-industry/";
 });
 
 const session = loadSession();
