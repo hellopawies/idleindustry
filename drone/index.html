@@ -16,261 +16,85 @@
   --yellow: #f0c040;
   --red: #e05070;
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-header {
-  display: flex;
-  align-items: center;
-  gap: .75rem;
-  padding: .6rem 1.25rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--surface2);
-  flex-shrink: 0;
-}
-
-header a {
-  color: var(--accent);
-  text-decoration: none;
-  font-size: .8rem;
-}
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+header { display: flex; align-items: center; gap: .75rem; padding: .6rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--surface2); flex-shrink: 0; }
+header a { color: var(--accent); text-decoration: none; font-size: .8rem; }
 header a:hover { text-decoration: underline; }
-
-header h1 {
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.badge {
-  background: var(--yellow);
-  color: #000;
-  font-size: .6rem;
-  font-weight: 800;
-  padding: .15rem .4rem;
-  border-radius: 4px;
-  letter-spacing: .06em;
-}
-
-main {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-#editor-panel {
-  width: 380px;
-  min-width: 280px;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--surface2);
-  flex-shrink: 0;
-}
-
-#toolbar {
-  display: flex;
-  gap: .4rem;
-  align-items: center;
-  padding: .6rem .75rem;
-  border-bottom: 1px solid var(--surface2);
-  background: var(--surface);
-  flex-shrink: 0;
-}
-
-.btn {
-  border: none;
-  border-radius: 6px;
-  padding: .35rem .8rem;
-  font-size: .8rem;
-  font-weight: 700;
-  cursor: pointer;
-}
+header h1 { font-size: 1rem; font-weight: 700; }
+.badge { background: var(--yellow); color: #000; font-size: .6rem; font-weight: 800; padding: .15rem .4rem; border-radius: 4px; letter-spacing: .06em; }
+main { display: flex; flex: 1; overflow: hidden; }
+#editor-panel { width: 380px; min-width: 280px; display: flex; flex-direction: column; border-right: 1px solid var(--surface2); flex-shrink: 0; }
+#toolbar { display: flex; gap: .4rem; align-items: center; padding: .6rem .75rem; border-bottom: 1px solid var(--surface2); background: var(--surface); flex-shrink: 0; }
+.btn { border: none; border-radius: 6px; padding: .35rem .8rem; font-size: .8rem; font-weight: 700; cursor: pointer; }
 .btn:disabled { opacity: .4; cursor: default; }
 .btn-run  { background: var(--green); color: #000; }
 .btn-stop { background: var(--red); color: #fff; }
 .btn-muted { background: var(--surface2); color: var(--muted); border: 1px solid #3a3760; }
 .btn-run:not(:disabled):hover, .btn-stop:not(:disabled):hover { filter: brightness(1.1); }
 .btn-muted:not(:disabled):hover { border-color: var(--accent); color: var(--text); }
-
-select {
-  background: var(--surface2);
-  color: var(--text);
-  border: 1px solid #3a3760;
-  padding: .35rem .5rem;
-  border-radius: 6px;
-  font-size: .75rem;
-  cursor: pointer;
-}
-
-#code-editor {
-  flex: 1;
-  background: #09090e;
-  color: #a8e6b8;
-  border: none;
-  padding: .85rem 1rem;
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-size: .82rem;
-  line-height: 1.65;
-  resize: none;
-  outline: none;
-  tab-size: 2;
-}
-
-#output {
-  height: 90px;
-  background: #07070c;
-  border-top: 1px solid var(--surface2);
-  padding: .4rem .75rem;
-  font-family: monospace;
-  font-size: .75rem;
-  overflow-y: auto;
-  flex-shrink: 0;
-}
-.out-log   { color: var(--muted); }
-.out-error { color: var(--red); }
-.out-info  { color: var(--accent); }
-
-#game-panel {
-  flex: 1;
-  display: flex;
-  gap: 1rem;
-  padding: 1rem;
-  overflow: auto;
-}
-
+select { background: var(--surface2); color: var(--text); border: 1px solid #3a3760; padding: .35rem .5rem; border-radius: 6px; font-size: .75rem; cursor: pointer; }
+#code-editor { flex: 1; background: #09090e; color: #a8e6b8; border: none; padding: .85rem 1rem; font-family: 'Consolas', 'Courier New', monospace; font-size: .82rem; line-height: 1.65; resize: none; outline: none; tab-size: 2; }
+#output { height: 90px; background: #07070c; border-top: 1px solid var(--surface2); padding: .4rem .75rem; font-family: monospace; font-size: .75rem; overflow-y: auto; flex-shrink: 0; }
+.out-log { color: var(--muted); } .out-error { color: var(--red); } .out-info { color: var(--accent); }
+#game-panel { flex: 1; display: flex; gap: 1rem; padding: 1rem; overflow: auto; }
 #farm-wrap { flex-shrink: 0; }
-
-#farm-grid {
-  display: inline-grid;
-  gap: 3px;
-  background: #1e1e2e;
-  padding: 3px;
-  border-radius: 8px;
-}
-
-.cell {
-  width: 68px;
-  height: 68px;
-  border-radius: 5px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-  transition: background .15s;
-}
-
-.cell.turf { background: #1b3020; }
-.cell.soil { background: #3b2810; }
-
-.cell.drone-here {
-  outline: 2.5px solid var(--accent);
-  outline-offset: -2px;
-}
-
-.cell-icon {
-  font-size: 1.75rem;
-  line-height: 1;
-  pointer-events: none;
-}
-
-.cell-bar {
-  position: absolute;
-  bottom: 4px;
-  left: 6px;
-  right: 6px;
-  height: 3px;
-  background: rgba(255,255,255,.08);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.cell-bar-fill {
-  height: 100%;
-  background: var(--green);
-  border-radius: 2px;
-}
+#farm-grid { display: inline-grid; gap: 3px; background: #1e1e2e; padding: 3px; border-radius: 8px; }
+.cell { width: 68px; height: 68px; border-radius: 5px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none; transition: background .15s; }
+.cell.turf { background: #1b3020; } .cell.soil { background: #3b2810; }
+.cell.drone-here { outline: 2.5px solid var(--accent); outline-offset: -2px; }
+.cell-icon { font-size: 1.75rem; line-height: 1; pointer-events: none; }
+.cell-bar { position: absolute; bottom: 4px; left: 6px; right: 6px; height: 3px; background: rgba(255,255,255,.08); border-radius: 2px; overflow: hidden; }
+.cell-bar-fill { height: 100%; background: var(--green); border-radius: 2px; }
 .cell.ready .cell-bar-fill { background: var(--yellow); }
-
-#side {
-  flex: 1;
-  min-width: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: .75rem;
-}
-
-.panel {
-  background: var(--surface);
-  border: 1px solid var(--surface2);
-  border-radius: 10px;
-  padding: .85rem 1rem;
-}
-
-.panel-title {
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: .7rem;
-}
-
-.item-row {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  padding: .25rem 0;
-}
-.item-icon { font-size: 1rem; }
-.item-name { color: var(--muted); font-size: .8rem; flex: 1; }
-.item-count { font-weight: 700; font-size: .9rem; font-variant-numeric: tabular-nums; }
-
-.unlock-card {
-  border: 1px solid var(--surface2);
-  border-radius: 7px;
-  padding: .6rem .75rem;
-  margin-bottom: .4rem;
-  cursor: pointer;
-  transition: border-color .15s;
-}
+#side { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: .75rem; }
+.panel { background: var(--surface); border: 1px solid var(--surface2); border-radius: 10px; padding: .85rem 1rem; }
+.panel-title { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: .7rem; }
+.item-row { display: flex; align-items: center; gap: .5rem; padding: .25rem 0; }
+.item-icon { font-size: 1rem; } .item-name { color: var(--muted); font-size: .8rem; flex: 1; } .item-count { font-weight: 700; font-size: .9rem; font-variant-numeric: tabular-nums; }
+.unlock-card { border: 1px solid var(--surface2); border-radius: 7px; padding: .6rem .75rem; margin-bottom: .4rem; cursor: pointer; transition: border-color .15s; }
 .unlock-card:last-child { margin-bottom: 0; }
 .unlock-card:hover:not(.owned):not(.needs-req) { border-color: var(--accent); }
-.unlock-card.owned  { border-color: var(--green); opacity: .65; cursor: default; }
+.unlock-card.owned { border-color: var(--green); opacity: .65; cursor: default; }
 .unlock-card.needs-req { opacity: .4; cursor: default; }
 .unlock-name { font-size: .82rem; font-weight: 600; margin-bottom: .15rem; }
 .unlock-desc { font-size: .72rem; color: var(--muted); margin-bottom: .3rem; }
 .unlock-cost { font-size: .72rem; color: var(--yellow); }
-
 .ref-col { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 1rem; }
 .ref-group-title { font-size: .7rem; color: var(--accent); margin-bottom: .2rem; font-weight: 600; }
 .ref-item { font-family: monospace; font-size: .7rem; color: var(--muted); line-height: 1.5; }
 .ref-item b { color: var(--text); }
-
 @media (max-width: 800px) {
   main { flex-direction: column; overflow: auto; }
   #editor-panel { width: 100%; height: 45vh; border-right: none; border-bottom: 1px solid var(--surface2); }
   #game-panel { flex-direction: column; }
 }
+/* Tutorial */
+#tut-overlay { display: none; position: fixed; inset: 0; z-index: 9000; }
+#tut-overlay.on { display: block; }
+#tut-spotlight { position: absolute; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,.72); transition: left .3s, top .3s, width .3s, height .3s; pointer-events: none; z-index: 9001; }
+#tut-modal { position: absolute; bottom: 1.75rem; left: 50%; transform: translateX(-50%); width: 430px; max-width: calc(100vw - 2rem); background: var(--surface); border: 1px solid var(--accent); border-radius: 14px; padding: 1.4rem 1.5rem 1.2rem; z-index: 9002; box-shadow: 0 20px 60px rgba(0,0,0,.7); }
+#tut-step-label { font-size: .68rem; color: var(--muted); margin-bottom: .45rem; }
+#tut-title { font-size: 1.05rem; font-weight: 700; margin-bottom: .55rem; }
+#tut-text { font-size: .85rem; color: var(--muted); line-height: 1.65; margin-bottom: .75rem; }
+#tut-code { display: none; background: #09090e; border-radius: 7px; padding: .55rem .85rem; font-family: monospace; font-size: .78rem; color: #a8e6b8; white-space: pre; margin-bottom: .75rem; }
+#tut-code.show { display: block; }
+#tut-footer { display: flex; align-items: center; justify-content: space-between; }
+#tut-dots { display: flex; gap: .3rem; }
+.tut-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--surface2); transition: background .2s; }
+.tut-dot.on { background: var(--accent); }
+#tut-skip { background: none; border: none; color: var(--muted); font-size: .78rem; cursor: pointer; padding: .25rem 0; }
+#tut-skip:hover { color: var(--text); }
+#tut-next { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: .42rem 1rem; font-size: .85rem; font-weight: 700; cursor: pointer; }
+#tut-next:hover { filter: brightness(1.1); }
 </style>
 </head>
 <body>
-
 <header>
   <a href="../">← PawieGames</a>
   <h1>The Drone Was Deployed</h1>
   <span class="badge">IN DEV</span>
 </header>
-
 <main>
   <div id="editor-panel">
     <div id="toolbar">
@@ -291,11 +115,8 @@ while (true) {
 }</textarea>
     <div id="output"></div>
   </div>
-
   <div id="game-panel">
-    <div id="farm-wrap">
-      <div id="farm-grid"></div>
-    </div>
+    <div id="farm-wrap"><div id="farm-grid"></div></div>
     <div id="side">
       <div class="panel" id="inv-panel">
         <div class="panel-title">Inventory</div>
@@ -342,230 +163,141 @@ while (true) {
     </div>
   </div>
 </main>
-
+<div id="tut-overlay">
+  <div id="tut-spotlight"></div>
+  <div id="tut-modal">
+    <div id="tut-step-label"></div>
+    <div id="tut-title"></div>
+    <div id="tut-text"></div>
+    <div id="tut-code"></div>
+    <div id="tut-footer">
+      <button id="tut-skip">Skip tutorial</button>
+      <div id="tut-dots"></div>
+      <button id="tut-next">Next →</button>
+    </div>
+  </div>
+</div>
 <script>
 const GROW_MS = { grass: 4000, bush: 5000, tree: 8000, carrot: 6000 };
-const ICONS = {
-  grass:  { g: '🌱', r: '🌿' },
-  bush:   { g: '🌿', r: '🫐' },
-  tree:   { g: '🌿', r: '🌲' },
-  carrot: { g: '🌱', r: '🥕' },
-};
-const DROPS = {
-  grass:  { item: 'hay',    n: 1 },
-  bush:   { item: 'wood',   n: 1 },
-  tree:   { item: 'wood',   n: 3 },
-  carrot: { item: 'carrot', n: 1 },
-};
-const INV_DISPLAY = [
-  { key: 'hay',    icon: '🌾', name: 'Hay' },
-  { key: 'wood',   icon: '🪵', name: 'Wood' },
-  { key: 'carrot', icon: '🥕', name: 'Carrot' },
-];
+const ICONS = { grass:{g:'🌱',r:'🌿'}, bush:{g:'🌿',r:'🫐'}, tree:{g:'🌿',r:'🌲'}, carrot:{g:'🌱',r:'🥕'} };
+const DROPS = { grass:{item:'hay',n:1}, bush:{item:'wood',n:1}, tree:{item:'wood',n:3}, carrot:{item:'carrot',n:1} };
+const INV_DISPLAY = [{key:'hay',icon:'🌾',name:'Hay'},{key:'wood',icon:'🪵',name:'Wood'},{key:'carrot',icon:'🥕',name:'Carrot'}];
 const RESEARCH = [
-  { id: 'bush',    name: 'Bush',             desc: 'Unlock Bush. Grows on Turf, drops Wood.',  cost: { hay: 10 },              grants: ['bush'] },
-  { id: 'tree',    name: 'Tree',             desc: 'Unlock Tree. Drops 3 Wood per harvest.',    cost: { wood: 15 },             req: ['bush'], grants: ['tree'] },
-  { id: 'carrot',  name: 'Carrot',           desc: 'Unlock Carrot. Needs tilled Soil.',         cost: { wood: 20, hay: 20 },    req: ['tree'], grants: ['carrot'] },
-  { id: 'speed1',  name: 'Speed I',          desc: 'Drone runs 2× faster.',                    cost: { hay: 30 },              speed: 2 },
-  { id: 'speed2',  name: 'Speed II',         desc: 'Drone runs 5× faster.',                    cost: { hay: 80, wood: 40 },    req: ['speed1'], speed: 5 },
-  { id: 'speed3',  name: 'Speed III',        desc: 'Drone runs 10× faster.',                   cost: { hay: 200, wood: 150 },  req: ['speed2'], speed: 10 },
-  { id: 'expand1', name: 'Expand Farm (5×5)', desc: 'Grow the farm to a 5×5 grid.',            cost: { wood: 30, hay: 30 },    expand: 5 },
-  { id: 'expand2', name: 'Expand Farm (7×7)', desc: 'Grow the farm to a 7×7 grid.',            cost: { wood: 100, hay: 100 },  req: ['expand1'], expand: 7 },
+  {id:'bush',name:'Bush',desc:'Unlock Bush. Grows on Turf, drops Wood.',cost:{hay:10},grants:['bush']},
+  {id:'tree',name:'Tree',desc:'Unlock Tree. Drops 3 Wood per harvest.',cost:{wood:15},req:['bush'],grants:['tree']},
+  {id:'carrot',name:'Carrot',desc:'Unlock Carrot. Needs tilled Soil.',cost:{wood:20,hay:20},req:['tree'],grants:['carrot']},
+  {id:'speed1',name:'Speed I',desc:'Drone runs 2× faster.',cost:{hay:30},speed:2},
+  {id:'speed2',name:'Speed II',desc:'Drone runs 5× faster.',cost:{hay:80,wood:40},req:['speed1'],speed:5},
+  {id:'speed3',name:'Speed III',desc:'Drone runs 10× faster.',cost:{hay:200,wood:150},req:['speed2'],speed:10},
+  {id:'expand1',name:'Expand Farm (5×5)',desc:'Grow the farm to a 5×5 grid.',cost:{wood:30,hay:30},expand:5},
+  {id:'expand2',name:'Expand Farm (7×7)',desc:'Grow the farm to a 7×7 grid.',cost:{wood:100,hay:100},req:['expand1'],expand:7},
 ];
 
 let G = newState();
+function newState() { return {size:3,grid:[],drone:{x:0,y:0},inv:{hay:0,wood:0,carrot:0},speed:1,running:false,stop:false,unlocked:new Set(['grass']),bought:new Set()}; }
+function makeCell(entity=null,growth=0){const now=Date.now();return{ground:'turf',entity,plantedAt:entity?now-growth*(GROW_MS[entity]||4000):0,clearAt:null};}
+function cellGrowth(cell){if(!cell.entity)return 0;return Math.min(1,(Date.now()-cell.plantedAt)/GROW_MS[cell.entity]);}
+function initFarm(size){G.size=size;G.grid=[];G.drone={x:0,y:0};for(let y=0;y<size;y++){G.grid[y]=[];for(let x=0;x<size;x++)G.grid[y][x]=makeCell('grass',Math.random());}}
+function expandFarm(newSize){const old=G.grid,oldSize=G.size;G.size=newSize;G.grid=[];for(let y=0;y<newSize;y++){G.grid[y]=[];for(let x=0;x<newSize;x++)G.grid[y][x]=(y<oldSize&&x<oldSize)?old[y][x]:makeCell('grass',Math.random());}}
+function cur(){return G.grid[G.drone.y][G.drone.x];}
 
-function newState() {
-  return { size: 3, grid: [], drone: { x: 0, y: 0 }, inv: { hay: 0, wood: 0, carrot: 0 }, speed: 1, running: false, stop: false, unlocked: new Set(['grass']), bought: new Set() };
-}
+setInterval(()=>{const now=Date.now();for(let y=0;y<G.size;y++)for(let x=0;x<G.size;x++){const c=G.grid[y][x];if(!c.entity&&c.ground==='turf'&&(!c.clearAt||now-c.clearAt>2000)){c.entity='grass';c.plantedAt=now;c.clearAt=null;}}render();},150);
 
-function makeCell(entity = null, growth = 0) {
-  const now = Date.now();
-  return { ground: 'turf', entity, plantedAt: entity ? now - growth * (GROW_MS[entity] || 4000) : 0, clearAt: null };
-}
-
-function cellGrowth(cell) {
-  if (!cell.entity) return 0;
-  return Math.min(1, (Date.now() - cell.plantedAt) / GROW_MS[cell.entity]);
-}
-
-function initFarm(size) {
-  G.size = size; G.grid = []; G.drone = { x: 0, y: 0 };
-  for (let y = 0; y < size; y++) { G.grid[y] = []; for (let x = 0; x < size; x++) G.grid[y][x] = makeCell('grass', Math.random()); }
-}
-
-function expandFarm(newSize) {
-  const old = G.grid, oldSize = G.size;
-  G.size = newSize; G.grid = [];
-  for (let y = 0; y < newSize; y++) {
-    G.grid[y] = [];
-    for (let x = 0; x < newSize; x++) G.grid[y][x] = (y < oldSize && x < oldSize) ? old[y][x] : makeCell('grass', Math.random());
+function render(){renderFarm();renderInv();renderResearch();}
+function renderFarm(){
+  const el=document.getElementById('farm-grid');
+  el.style.gridTemplateColumns=`repeat(${G.size},68px)`;
+  const want=G.size*G.size;
+  while(el.children.length<want){const d=document.createElement('div');d.className='cell';d.innerHTML='<div class="cell-icon"></div><div class="cell-bar"><div class="cell-bar-fill"></div></div>';el.appendChild(d);}
+  while(el.children.length>want)el.removeChild(el.lastChild);
+  let i=0;
+  for(let y=0;y<G.size;y++)for(let x=0;x<G.size;x++){
+    const c=G.grid[y][x],d=el.children[i++],g=cellGrowth(c),ready=g>=1,isDrone=G.drone.x===x&&G.drone.y===y;
+    d.className=`cell ${c.ground}${ready?' ready':''}${isDrone?' drone-here':''}`;
+    const ic=ICONS[c.entity];let txt=c.entity?(ic?(ready?ic.r:ic.g):'?'):'';
+    if(isDrone)txt='⚡'+txt;
+    d.querySelector('.cell-icon').textContent=txt;
+    d.querySelector('.cell-bar-fill').style.width=`${g*100}%`;
   }
 }
+function renderInv(){document.getElementById('inv-list').innerHTML=INV_DISPLAY.map(it=>`<div class="item-row"><span class="item-icon">${it.icon}</span><span class="item-name">${it.name}</span><span class="item-count">${G.inv[it.key]??0}</span></div>`).join('');}
+function renderResearch(){document.getElementById('research-list').innerHTML=RESEARCH.map(u=>{const owned=G.bought.has(u.id),reqOk=!u.req||u.req.every(r=>G.bought.has(r)),costStr=Object.entries(u.cost).map(([k,v])=>`${v} ${k}`).join(', ');let cls='unlock-card'+(owned?' owned':reqOk?'':' needs-req');return`<div class="${cls}" onclick="buyResearch('${u.id}')"><div class="unlock-name">${owned?'✓ ':''}${u.name}</div><div class="unlock-desc">${u.desc}</div>${!owned?`<div class="unlock-cost">Cost: ${costStr}</div>`:''}</div>`;}).join('');}
 
-function cur() { return G.grid[G.drone.y][G.drone.x]; }
-
-setInterval(() => {
-  const now = Date.now();
-  for (let y = 0; y < G.size; y++) for (let x = 0; x < G.size; x++) {
-    const c = G.grid[y][x];
-    if (!c.entity && c.ground === 'turf' && (!c.clearAt || now - c.clearAt > 2000)) {
-      c.entity = 'grass'; c.plantedAt = now; c.clearAt = null;
-    }
-  }
-  render();
-}, 150);
-
-function render() { renderFarm(); renderInv(); renderResearch(); }
-
-function renderFarm() {
-  const el = document.getElementById('farm-grid');
-  el.style.gridTemplateColumns = `repeat(${G.size}, 68px)`;
-  const want = G.size * G.size;
-  while (el.children.length < want) { const d = document.createElement('div'); d.className = 'cell'; d.innerHTML = '<div class="cell-icon"></div><div class="cell-bar"><div class="cell-bar-fill"></div></div>'; el.appendChild(d); }
-  while (el.children.length > want) el.removeChild(el.lastChild);
-  let i = 0;
-  for (let y = 0; y < G.size; y++) for (let x = 0; x < G.size; x++) {
-    const c = G.grid[y][x], d = el.children[i++];
-    const g = cellGrowth(c), ready = g >= 1, isDrone = G.drone.x === x && G.drone.y === y;
-    d.className = `cell ${c.ground}${ready ? ' ready' : ''}${isDrone ? ' drone-here' : ''}`;
-    const ic = ICONS[c.entity]; let txt = c.entity ? (ic ? (ready ? ic.r : ic.g) : '?') : '';
-    if (isDrone) txt = '⚡' + txt;
-    d.querySelector('.cell-icon').textContent = txt;
-    d.querySelector('.cell-bar-fill').style.width = `${g * 100}%`;
-  }
-}
-
-function renderInv() {
-  document.getElementById('inv-list').innerHTML = INV_DISPLAY.map(it =>
-    `<div class="item-row"><span class="item-icon">${it.icon}</span><span class="item-name">${it.name}</span><span class="item-count">${G.inv[it.key] ?? 0}</span></div>`
-  ).join('');
-}
-
-function renderResearch() {
-  document.getElementById('research-list').innerHTML = RESEARCH.map(u => {
-    const owned = G.bought.has(u.id), reqOk = !u.req || u.req.every(r => G.bought.has(r));
-    const costStr = Object.entries(u.cost).map(([k, v]) => `${v} ${k}`).join(', ');
-    let cls = 'unlock-card' + (owned ? ' owned' : reqOk ? '' : ' needs-req');
-    return `<div class="${cls}" onclick="buyResearch('${u.id}')">
-      <div class="unlock-name">${owned ? '✓ ' : ''}${u.name}</div>
-      <div class="unlock-desc">${u.desc}</div>
-      ${!owned ? `<div class="unlock-cost">Cost: ${costStr}</div>` : ''}
-    </div>`;
-  }).join('');
-}
-
-function buyResearch(id) {
-  const u = RESEARCH.find(r => r.id === id);
-  if (!u || G.bought.has(id)) return;
-  if (u.req && !u.req.every(r => G.bought.has(r))) { log('Requirements not met.', 'error'); return; }
-  if (!Object.entries(u.cost).every(([k, v]) => (G.inv[k] || 0) >= v)) { log(`Not enough resources for ${u.name}.`, 'error'); return; }
-  Object.entries(u.cost).forEach(([k, v]) => G.inv[k] -= v);
+function buyResearch(id){
+  const u=RESEARCH.find(r=>r.id===id);
+  if(!u||G.bought.has(id))return;
+  if(u.req&&!u.req.every(r=>G.bought.has(r))){log('Requirements not met.','error');return;}
+  if(!Object.entries(u.cost).every(([k,v])=>(G.inv[k]||0)>=v)){log(`Not enough resources for ${u.name}.`,'error');return;}
+  Object.entries(u.cost).forEach(([k,v])=>G.inv[k]-=v);
   G.bought.add(id);
-  if (u.grants) u.grants.forEach(e => G.unlocked.add(e));
-  if (u.speed)  { G.speed = u.speed; document.getElementById('speed-sel').value = u.speed; }
-  if (u.expand) expandFarm(u.expand);
-  log(`Researched: ${u.name}`, 'info');
-  render();
+  if(u.grants)u.grants.forEach(e=>G.unlocked.add(e));
+  if(u.speed){G.speed=u.speed;document.getElementById('speed-sel').value=u.speed;}
+  if(u.expand)expandFarm(u.expand);
+  log(`Researched: ${u.name}`,'info');render();
 }
 
-function delay(ms) { return new Promise((res, rej) => setTimeout(() => G.stop ? rej(new Error('__STOP__')) : res(), ms)); }
-function actionDelay() { return delay(500 / G.speed); }
-function chk() { if (G.stop) throw new Error('__STOP__'); }
+function delay(ms){return new Promise((res,rej)=>setTimeout(()=>G.stop?rej(new Error('__STOP__')):res(),ms));}
+function actionDelay(){return delay(500/G.speed);}
+function chk(){if(G.stop)throw new Error('__STOP__');}
+const DIR={north:d=>({x:d.x,y:(d.y-1+G.size)%G.size}),south:d=>({x:d.x,y:(d.y+1)%G.size}),east:d=>({x:(d.x+1)%G.size,y:d.y}),west:d=>({x:(d.x-1+G.size)%G.size,y:d.y})};
+async function apiMove(dir){chk();const k=(typeof dir==='string'?dir:'').toLowerCase();if(!DIR[k])throw new Error(`Unknown direction: "${dir}". Use North, South, East, or West.`);await actionDelay();G.drone=DIR[k](G.drone);}
+async function apiHarvest(){chk();const c=cur();if(!c.entity||cellGrowth(c)<1)return false;await actionDelay();const d=DROPS[c.entity];if(d)G.inv[d.item]=(G.inv[d.item]||0)+d.n;c.entity=null;c.clearAt=Date.now();return true;}
+async function apiTill(){chk();await actionDelay();const c=cur();if(c.entity){c.entity=null;c.clearAt=Date.now();}c.ground=c.ground==='turf'?'soil':'turf';}
+async function apiPlant(type){chk();const t=typeof type==='string'?type.toLowerCase():String(type??'');if(!G.unlocked.has(t)){log(`${t} is not unlocked yet.`,'error');return false;}const c=cur();if(c.entity||(t==='carrot'&&c.ground!=='soil'))return false;await actionDelay();c.entity=t;c.plantedAt=Date.now();c.clearAt=null;return true;}
+const apiCanHarvest=()=>{const c=cur();return!!(c.entity&&cellGrowth(c)>=1);};
+const apiEntityType=()=>cur().entity;
+const apiGroundType=()=>cur().ground;
+const apiWorldSize=()=>G.size;
+const apiPosX=()=>G.drone.x;
+const apiPosY=()=>G.drone.y;
+const apiNumItems=(k)=>G.inv[(typeof k==='string'?k:'').toLowerCase()]||0;
+const apiPrint=(...a)=>log(a.join(' '),'log');
+const API_KEYS=['move','harvest','plant','till','canHarvest','getEntityType','getGroundType','getWorldSize','getPosX','getPosY','numItems','print','North','South','East','West','Entities','Grounds','Items'];
+const API_VALS=[apiMove,apiHarvest,apiPlant,apiTill,apiCanHarvest,apiEntityType,apiGroundType,apiWorldSize,apiPosX,apiPosY,apiNumItems,apiPrint,'north','south','east','west',{Grass:'grass',Bush:'bush',Tree:'tree',Carrot:'carrot'},{Turf:'turf',Soil:'soil'},{Hay:'hay',Wood:'wood',Carrot:'carrot'}];
 
-const DIR = {
-  north: d => ({ x: d.x, y: (d.y - 1 + G.size) % G.size }),
-  south: d => ({ x: d.x, y: (d.y + 1) % G.size }),
-  east:  d => ({ x: (d.x + 1) % G.size, y: d.y }),
-  west:  d => ({ x: (d.x - 1 + G.size) % G.size, y: d.y }),
-};
-
-async function apiMove(dir) {
-  chk(); const k = (typeof dir === 'string' ? dir : '').toLowerCase();
-  if (!DIR[k]) throw new Error(`Unknown direction: "${dir}". Use North, South, East, or West.`);
-  await actionDelay(); G.drone = DIR[k](G.drone);
+async function runCode(){
+  const code=document.getElementById('code-editor').value;
+  G.running=true;G.stop=false;
+  document.getElementById('btn-run').disabled=true;
+  document.getElementById('btn-stop').disabled=false;
+  log('Running...','info');
+  try{const fn=new(Object.getPrototypeOf(async function(){}).constructor)(...API_KEYS,code);await fn(...API_VALS);log('Done.','info');}
+  catch(e){if(e.message!=='__STOP__')log(`Error: ${e.message}`,'error');else log('Stopped.','info');}
+  G.running=false;G.stop=false;
+  document.getElementById('btn-run').disabled=false;
+  document.getElementById('btn-stop').disabled=true;
 }
 
-async function apiHarvest() {
-  chk(); const c = cur();
-  if (!c.entity || cellGrowth(c) < 1) return false;
-  await actionDelay();
-  const d = DROPS[c.entity]; if (d) G.inv[d.item] = (G.inv[d.item] || 0) + d.n;
-  c.entity = null; c.clearAt = Date.now(); return true;
-}
+function log(msg,type='log'){const out=document.getElementById('output');const line=document.createElement('div');line.className=`out-${type}`;line.textContent=`> ${msg}`;out.appendChild(line);out.scrollTop=out.scrollHeight;while(out.children.length>60)out.removeChild(out.firstChild);}
 
-async function apiTill() {
-  chk(); await actionDelay(); const c = cur();
-  if (c.entity) { c.entity = null; c.clearAt = Date.now(); }
-  c.ground = c.ground === 'turf' ? 'soil' : 'turf';
-}
+document.getElementById('btn-run').addEventListener('click',runCode);
+document.getElementById('btn-stop').addEventListener('click',()=>{G.stop=true;});
+document.getElementById('speed-sel').addEventListener('change',e=>{G.speed=+e.target.value;});
+document.getElementById('btn-reset').addEventListener('click',()=>{G.stop=true;setTimeout(()=>{G=newState();document.getElementById('output').innerHTML='';document.getElementById('btn-run').disabled=false;document.getElementById('btn-stop').disabled=true;initFarm(3);render();log('Game reset.','info');},100);});
+document.getElementById('code-editor').addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const t=e.target,s=t.selectionStart;t.value=t.value.slice(0,s)+'  '+t.value.slice(t.selectionEnd);t.selectionStart=t.selectionEnd=s+2;}});
 
-async function apiPlant(type) {
-  chk(); const t = typeof type === 'string' ? type.toLowerCase() : String(type ?? '');
-  if (!G.unlocked.has(t)) { log(`${t} is not unlocked yet.`, 'error'); return false; }
-  const c = cur();
-  if (c.entity || (t === 'carrot' && c.ground !== 'soil')) return false;
-  await actionDelay(); c.entity = t; c.plantedAt = Date.now(); c.clearAt = null; return true;
-}
+// Tutorial
+const TUT_STEPS=[
+  {title:'Welcome to The Drone Was Deployed! 🤖',text:"You're a programmer who's taken over a farm. Instead of farming yourself, you'll write code to control a drone that does all the work. Let's walk through the basics."},
+  {title:'Your Farm',text:'This is your 3×3 farm grid. The ⚡ symbol is your drone. Each tile can hold a crop — the bar at the bottom shows growth. When it turns yellow, the crop is ready to harvest!',highlight:'#farm-grid'},
+  {title:'The Code Editor',text:'Write JavaScript here to control the drone. Actions like move() and harvest() use `await` to pause and execute step by step. Sensing functions like canHarvest() are instant — no await needed.',highlight:'#code-editor'},
+  {title:'Run Your Code',text:"The editor has a starter script that loops forever: if something's ready to harvest, harvest it — then move East. Click ▶ Run to watch your drone go!",highlight:'#btn-run',code:'while (true) {\n  if (canHarvest()) await harvest();\n  await move(East);\n}'},
+  {title:'Your Inventory',text:'Resources you harvest appear here. Grass drops Hay, Bush drops Wood, Carrots drop Carrot. These are your currency — spend them in Research to unlock upgrades.',highlight:'#inv-panel'},
+  {title:'Research Tree',text:'Click any card here to buy an upgrade with your resources. Unlock new crops, speed boosts (up to 10×), and bigger farms. Start by saving 10 Hay to unlock Bush!',highlight:'#research-panel'},
+  {title:"You're ready! 🌾",text:"That's all you need. Write smarter code to cover the whole farm — try nested for loops with getPosX(), getPosY(), and getWorldSize(). Happy farming!",isLast:true},
+];
+let tutIdx=0;
+function tutShow(i){const s=TUT_STEPS[i];document.getElementById('tut-step-label').textContent=`Step ${i+1} of ${TUT_STEPS.length}`;document.getElementById('tut-title').textContent=s.title;document.getElementById('tut-text').textContent=s.text;const codeEl=document.getElementById('tut-code');if(s.code){codeEl.textContent=s.code;codeEl.classList.add('show');}else codeEl.classList.remove('show');document.getElementById('tut-next').textContent=s.isLast?'🌾 Start Playing!':'Next →';document.getElementById('tut-dots').innerHTML=TUT_STEPS.map((_,j)=>`<div class="tut-dot${j===i?' on':''}"></div>`).join('');tutSpotlight(s.highlight);}
+function tutSpotlight(sel){const sp=document.getElementById('tut-spotlight');if(!sel){sp.style.boxShadow='none';sp.style.width='0';return;}const el=document.querySelector(sel);if(!el){sp.style.boxShadow='none';return;}const r=el.getBoundingClientRect(),p=8;sp.style.left=`${r.left-p}px`;sp.style.top=`${r.top-p}px`;sp.style.width=`${r.width+p*2}px`;sp.style.height=`${r.height+p*2}px`;sp.style.boxShadow='0 0 0 9999px rgba(0,0,0,.72)';}
+function tutNext(){tutIdx++;if(tutIdx>=TUT_STEPS.length){tutEnd();return;}tutShow(tutIdx);}
+function tutEnd(){document.getElementById('tut-overlay').classList.remove('on');localStorage.setItem('drone-tut-done','1');}
+document.getElementById('tut-next').addEventListener('click',tutNext);
+document.getElementById('tut-skip').addEventListener('click',tutEnd);
 
-const apiCanHarvest = () => { const c = cur(); return !!(c.entity && cellGrowth(c) >= 1); };
-const apiEntityType = () => cur().entity;
-const apiGroundType = () => cur().ground;
-const apiWorldSize  = () => G.size;
-const apiPosX       = () => G.drone.x;
-const apiPosY       = () => G.drone.y;
-const apiNumItems   = (k) => G.inv[(typeof k === 'string' ? k : '').toLowerCase()] || 0;
-const apiPrint      = (...a) => log(a.join(' '), 'log');
-
-const API_KEYS = ['move','harvest','plant','till','canHarvest','getEntityType','getGroundType','getWorldSize','getPosX','getPosY','numItems','print','North','South','East','West','Entities','Grounds','Items'];
-const API_VALS = [apiMove,apiHarvest,apiPlant,apiTill,apiCanHarvest,apiEntityType,apiGroundType,apiWorldSize,apiPosX,apiPosY,apiNumItems,apiPrint,'north','south','east','west',{Grass:'grass',Bush:'bush',Tree:'tree',Carrot:'carrot'},{Turf:'turf',Soil:'soil'},{Hay:'hay',Wood:'wood',Carrot:'carrot'}];
-
-async function runCode() {
-  const code = document.getElementById('code-editor').value;
-  G.running = true; G.stop = false;
-  document.getElementById('btn-run').disabled = true;
-  document.getElementById('btn-stop').disabled = false;
-  log('Running...', 'info');
-  try {
-    const fn = new (Object.getPrototypeOf(async function(){}).constructor)(...API_KEYS, code);
-    await fn(...API_VALS);
-    log('Done.', 'info');
-  } catch(e) {
-    if (e.message !== '__STOP__') log(`Error: ${e.message}`, 'error');
-    else log('Stopped.', 'info');
-  }
-  G.running = false; G.stop = false;
-  document.getElementById('btn-run').disabled = false;
-  document.getElementById('btn-stop').disabled = true;
-}
-
-function log(msg, type = 'log') {
-  const out = document.getElementById('output');
-  const line = document.createElement('div'); line.className = `out-${type}`; line.textContent = `> ${msg}`;
-  out.appendChild(line); out.scrollTop = out.scrollHeight;
-  while (out.children.length > 60) out.removeChild(out.firstChild);
-}
-
-document.getElementById('btn-run').addEventListener('click', runCode);
-document.getElementById('btn-stop').addEventListener('click', () => { G.stop = true; });
-document.getElementById('speed-sel').addEventListener('change', e => { G.speed = +e.target.value; });
-document.getElementById('btn-reset').addEventListener('click', () => {
-  G.stop = true;
-  setTimeout(() => {
-    G = newState();
-    document.getElementById('output').innerHTML = '';
-    document.getElementById('btn-run').disabled = false;
-    document.getElementById('btn-stop').disabled = true;
-    initFarm(3); render(); log('Game reset.', 'info');
-  }, 100);
-});
-document.getElementById('code-editor').addEventListener('keydown', e => {
-  if (e.key === 'Tab') { e.preventDefault(); const t = e.target, s = t.selectionStart; t.value = t.value.slice(0,s)+'  '+t.value.slice(t.selectionEnd); t.selectionStart = t.selectionEnd = s+2; }
-});
-
-initFarm(3); render();
-log('Welcome! Write code in the editor and click Run.', 'info');
-log('Try: while(true){ if(canHarvest()) await harvest(); await move(East); }', 'log');
+initFarm(3);render();
+log('Welcome! Write code in the editor and click Run.','info');
+log('Try: while(true){ if(canHarvest()) await harvest(); await move(East); }','log');
+setTimeout(()=>{if(!localStorage.getItem('drone-tut-done')){tutIdx=0;tutShow(0);document.getElementById('tut-overlay').classList.add('on');}},400);
 </script>
 </body>
 </html>
