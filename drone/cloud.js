@@ -13,7 +13,8 @@ async function saveCloud() {
   const code = document.getElementById('code-editor')?.value ?? '';
   const { error } = await sb.rpc("save_drone", {
     p_user_id: currentUserId,
-    p_data: { bought: [...G.bought], inv: { ...G.inv }, code },
+    p_data: { bought: [...G.bought], inv: { ...G.inv } },
+    p_code: code,
   });
   if (error) console.error('[cloud] save failed:', error);
   else console.log('[cloud] saved ok');
