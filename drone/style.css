@@ -3,6 +3,7 @@
   --surface: #1a1a24;
   --surface2: #22223a;
   --accent: #6c63ff;
+  --accent-hover: #857df8;
   --text: #e8e8f0;
   --muted: #888899;
   --green: #4caf8a;
@@ -11,9 +12,11 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-header { display: flex; align-items: center; gap: .75rem; padding: .6rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--surface2); flex-shrink: 0; }
-header a { color: var(--muted); text-decoration: none; font-size: .8rem; font-weight: 600; transition: color 0.15s; }
-header a:hover { color: var(--text); }
+header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid #2a2a3e; box-shadow: 0 2px 12px rgba(0,0,0,0.4); flex-shrink: 0; position: sticky; top: 0; z-index: 100; }
+header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: .03em; color: var(--accent-hover); white-space: nowrap; flex: 1; }
+header h1 span { color: var(--text); }
+.hdr-back { color: var(--muted); text-decoration: none; font-size: .8rem; font-weight: 600; transition: color 0.15s; white-space: nowrap; }
+.hdr-back:hover { color: var(--text); }
 main { display: flex; flex: 1; overflow: hidden; }
 #editor-panel { width: 380px; min-width: 280px; display: flex; flex-direction: column; border-right: 1px solid var(--surface2); flex-shrink: 0; }
 #toolbar { display: flex; gap: .4rem; align-items: center; padding: .6rem .75rem; border-bottom: 1px solid var(--surface2); background: var(--surface); flex-shrink: 0; }
