@@ -676,6 +676,22 @@
 </head>
 <body>
 
+<!-- Maintenance overlay -->
+<div id="maintenance-screen" style="
+  position:fixed;inset:0;z-index:99999;
+  background:#0f0f13;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'Segoe UI',system-ui,sans-serif;color:#e8e8f0;text-align:center;padding:2rem;
+">
+  <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#6c63ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:1.5rem">
+    <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M2 12h2"/><path d="M20 12h2"/>
+  </svg>
+  <h1 style="font-size:1.8rem;font-weight:700;margin-bottom:.75rem;color:#6c63ff">Under Maintenance</h1>
+  <p style="color:#888899;max-width:360px;line-height:1.6">
+    Idle Industry is currently undergoing scheduled maintenance.<br>We'll be back shortly.
+  </p>
+</div>
+
 <!-- Global animated background (fixed, behind all screens) -->
 <canvas id="bg-canvas"></canvas>
 
