@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"systemMessage\": \"💡 PawieGames daily reminder: ask me for a game idea! Try: give me a game idea for Idle Industry\"}'"
+            "command": "last=$(cat ~/.pawiegames-reminder-date 2>/dev/null); today=$(date +%Y-%m-%d); if [ \"$last\" != \"$today\" ]; then echo \"$today\" > ~/.pawiegames-reminder-date; echo '{\"systemMessage\": \"\ud83d\udca1 PawieGames daily reminder: ask me for a game idea! Try: give me a game idea for Idle Industry\"}'; fi"
           }
         ]
       }
