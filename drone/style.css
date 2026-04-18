@@ -12,8 +12,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 header { display: flex; align-items: center; gap: .75rem; padding: .6rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--surface2); flex-shrink: 0; }
-header a { color: var(--accent); text-decoration: none; font-size: .8rem; }
-header a:hover { text-decoration: underline; }
+header a { color: var(--muted); text-decoration: none; font-size: .8rem; font-weight: 600; transition: color 0.15s; }
+header a:hover { color: var(--text); }
 header h1 { font-size: 1rem; font-weight: 700; }
 .badge { background: var(--yellow); color: #000; font-size: .6rem; font-weight: 800; padding: .15rem .4rem; border-radius: 4px; letter-spacing: .06em; }
 main { display: flex; flex: 1; overflow: hidden; }
