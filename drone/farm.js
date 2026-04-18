@@ -123,6 +123,23 @@ function renderResearch() {
 
 // ── Research ─────────────────────────────────────────────────
 
+function farmSizeFromBought() {
+  if (G.bought.has('expand2')) return 7;
+  if (G.bought.has('expand1')) return 5;
+  return 3;
+}
+
+function applyBought() {
+  G.unlocked = new Set(['grass']);
+  G.speed = 1;
+  for (const id of G.bought) {
+    const u = RESEARCH.find(r => r.id === id);
+    if (!u) continue;
+    if (u.grants) u.grants.forEach(e => G.unlocked.add(e));
+    if (u.speed)  G.speed = u.speed;
+  }
+}
+
 function buyResearch(id) {
   const u = RESEARCH.find(r => r.id === id);
   if (!u || G.bought.has(id)) return;
@@ -135,6 +152,7 @@ function buyResearch(id) {
   if (u.expand) expandFarm(u.expand);
   log(`Researched: ${u.name}`, 'info');
   render();
+  saveCloud();
 }
 
 // ── Output log ───────────────────────────────────────────────

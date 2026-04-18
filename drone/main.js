@@ -22,6 +22,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
     initFarm(3);
     render();
     log('Game reset.', 'info');
+    saveCloud();
   }, 100);
 });
 
@@ -36,15 +37,31 @@ document.getElementById('code-editor').addEventListener('keydown', e => {
 
 // ── Init ─────────────────────────────────────────────────────
 
-initFarm(3);
-render();
-log('Welcome! Write code in the editor and click Run.', 'info');
-log('Try: while(true){ if(canHarvest()) await harvest(); await move(East); }', 'log');
-
-setTimeout(() => {
-  if (!localStorage.getItem('drone-tut-done')) {
-    tutIdx = 0;
-    tutShow(0);
-    document.getElementById('tut-overlay').classList.add('on');
+(async () => {
+  const saved = await loadCloud();
+  if (saved?.bought?.length > 0) {
+    G.bought = new Set(saved.bought);
+    G.inv    = { hay: 0, wood: 0, carrot: 0, ...saved.inv };
+    applyBought();
+    initFarm(farmSizeFromBought());
+    document.getElementById('speed-sel').value = G.speed;
+  } else {
+    initFarm(3);
   }
-}, 400);
+
+  render();
+  log('Welcome! Write code in the editor and click Run.', 'info');
+  log('Try: while(true){ if(canHarvest()) await harvest(); await move(East); }', 'log');
+
+  setTimeout(() => {
+    if (!localStorage.getItem('drone-tut-done')) {
+      tutIdx = 0;
+      tutShow(0);
+      document.getElementById('tut-overlay').classList.add('on');
+    }
+  }, 400);
+
+  // Periodic save every 30s
+  setInterval(saveCloud, 30_000);
+  window.addEventListener('beforeunload', saveCloud);
+})();
