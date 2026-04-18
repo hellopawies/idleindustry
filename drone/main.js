@@ -26,6 +26,7 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   }, 100);
 });
 
+let _saveTimer = null;
 document.getElementById('code-editor').addEventListener('keydown', e => {
   if (e.key === 'Tab') {
     e.preventDefault();
@@ -33,6 +34,10 @@ document.getElementById('code-editor').addEventListener('keydown', e => {
     t.value = t.value.slice(0, s) + '  ' + t.value.slice(t.selectionEnd);
     t.selectionStart = t.selectionEnd = s + 2;
   }
+});
+document.getElementById('code-editor').addEventListener('input', () => {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveCloud, 2000);
 });
 
 // ── Init ─────────────────────────────────────────────────────
