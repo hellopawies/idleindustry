@@ -8,6 +8,15 @@ try {
 
 document.getElementById('btn-run').addEventListener('click', runCode);
 
+document.getElementById('btn-save').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-save');
+  btn.textContent = '💾 Saving…';
+  btn.disabled = true;
+  await saveCloud();
+  btn.textContent = '✓ Saved';
+  setTimeout(() => { btn.textContent = '💾 Save'; btn.disabled = false; }, 1500);
+});
+
 document.getElementById('btn-stop').addEventListener('click', () => { G.stop = true; });
 
 document.getElementById('speed-sel').addEventListener('change', e => { G.speed = +e.target.value; });
