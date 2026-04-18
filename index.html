@@ -30,8 +30,25 @@
     justify-content: center;
     align-items: center;
     padding: 24px;
+    position: relative;
+    overflow: hidden;
   }
   #auth-screen.visible { display: flex; }
+
+  #auth-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  #auth-bg span {
+    position: absolute; bottom: -60px; font-size: 2rem; opacity: 0;
+    animation: float-up linear infinite;
+    filter: grayscale(.3);
+    user-select: none;
+  }
+  @keyframes float-up {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+    10%  { opacity: .12; }
+    90%  { opacity: .12; }
+    100% { transform: translateY(-110vh) rotate(360deg); opacity: 0; }
+  }
+  #auth-card { position: relative; z-index: 1; }
   #auth-card {
     background: var(--surface);
     border: 1px solid #2a2a3e;
@@ -126,6 +143,7 @@
 
 <!-- Auth screen -->
 <div id="auth-screen">
+  <div id="auth-bg"></div>
   <div id="auth-card">
     <div class="auth-logo">Pawie<span>Games</span></div>
     <div class="auth-tagline">One account. All games.</div>
@@ -209,6 +227,22 @@
 </div>
 
 <script>
+(function seedAuthBg() {
+  const bg = document.getElementById("auth-bg");
+  if (!bg) return;
+  const icons = ["💰","🏭","🌾","⚡","📊","💼","🚜","💎","🪙","🎮","🤖","🌱","📈","🏆"];
+  const n = 18;
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement("span");
+    s.textContent = icons[Math.floor(Math.random() * icons.length)];
+    s.style.left = (Math.random() * 100) + "%";
+    s.style.animationDuration = (22 + Math.random() * 22) + "s";
+    s.style.animationDelay = (-Math.random() * 40) + "s";
+    s.style.fontSize = (1.4 + Math.random() * 1.6) + "rem";
+    bg.appendChild(s);
+  }
+})();
+
 const SUPABASE_URL      = "https://fwawlsbjltgvcpyezciw.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_cWfZRmHb55YMA-wa7hb6rw_qP6dIuYi";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
