@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"💡 PawieGames daily reminder: ask me for a game idea! Try: give me a game idea for Idle Industry\"}'" 
+          }
+        ]
+      }
+    ]
+  }
+}
