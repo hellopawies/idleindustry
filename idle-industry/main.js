@@ -36,7 +36,8 @@ async function init() {
     return;
   }
 
-  if (session.isAdmin) {
+  const isAdminMode = session.isAdmin && new URLSearchParams(location.search).has('admin');
+  if (isAdminMode) {
     await onAdminLogin(session.userId, session.username);
   } else {
     await onLogin(session.userId, session.username);
