@@ -10,9 +10,10 @@ try {
 
 async function saveCloud() {
   if (!currentUserId) return;
+  const code = document.getElementById('code-editor')?.value ?? '';
   await sb.rpc("save_drone", {
     p_user_id: currentUserId,
-    p_data: { bought: [...G.bought], inv: { ...G.inv } },
+    p_data: { bought: [...G.bought], inv: { ...G.inv }, code },
   });
 }
 

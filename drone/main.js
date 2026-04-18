@@ -39,12 +39,17 @@ document.getElementById('code-editor').addEventListener('keydown', e => {
 
 (async () => {
   const saved = await loadCloud();
-  if (saved?.bought?.length > 0) {
-    G.bought = new Set(saved.bought);
-    G.inv    = { hay: 0, wood: 0, carrot: 0, ...saved.inv };
-    applyBought();
-    initFarm(farmSizeFromBought());
-    document.getElementById('speed-sel').value = G.speed;
+  if (saved) {
+    if (saved.bought?.length > 0) {
+      G.bought = new Set(saved.bought);
+      G.inv    = { hay: 0, wood: 0, carrot: 0, ...saved.inv };
+      applyBought();
+      initFarm(farmSizeFromBought());
+      document.getElementById('speed-sel').value = G.speed;
+    } else {
+      initFarm(3);
+    }
+    if (saved.code) document.getElementById('code-editor').value = saved.code;
   } else {
     initFarm(3);
   }
