@@ -340,13 +340,3 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-// ── Reset ─────────────────────────────────────────────────────
-document.getElementById("reset-btn").addEventListener("click", async () => {
-  if (!confirm("Reset all progress? This cannot be undone.")) return;
-  clearCache();
-  await sb.rpc("delete_save", { p_user_id: currentUserId });
-  state       = { money: STARTING_MONEY, lastSave: now(), owned: new Array(INDUSTRIES.length).fill(0) };
-  firstRender = true;
-  document.getElementById("industry-list").innerHTML = "";
-  render();
-});
