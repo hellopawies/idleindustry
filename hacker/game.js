@@ -221,6 +221,16 @@ async function handleCommand(raw) {
       case 'shop':
       case 'store':      await cmdShop(args);                break;
       case 'bribe':      await cmdBribe(args[0]);            break;
+      case 'ping':       await cmdPing(args[0]);             break;
+      case 'sniff':      await cmdSniff();                   break;
+      case 'fuzz':       await cmdFuzz();                    break;
+      case 'exploit':    await cmdExploit(args[0]);          break;
+      case 'decrypt':    await cmdDecrypt(args[0]);          break;
+      case 'wipe':       await cmdWipe();                    break;
+      case 'stego':      await cmdStego(args[0]);            break;
+      case 'persist':    await cmdPersist();                 break;
+      case 'exfil':      await cmdExfil();                   break;
+      case 'grep':       await cmdGrep(args[0], args[1]);    break;
       default:
         printLine(`Command not found: ${cmd}  — type "help"`, 'out-err');
     }
@@ -236,30 +246,42 @@ async function cmdHelp() {
   const showInject = G.tools.includes('sqli_kit') || (!G.freeMode && getCurrentMission()?.id === 'a1m2');
   const lines = [
     { type: 'sys',  text: '[ AVAILABLE COMMANDS ]' },
-    { type: 'info', text: '  help                — this message' },
-    { type: 'info', text: '  whoami              — your profile' },
-    { type: 'info', text: '  status              — current mission / contract' },
-    { type: 'info', text: '  scan <ip>           — find open ports on a target' },
-    { type: 'info', text: '  connect <ip> <port> — connect to a service' },
-    { type: 'info', text: '  disconnect          — end current connection' },
-    { type: 'info', text: '  crack               — brute-force SSH password' },
+    { type: 'info', text: '  help                    — this message' },
+    { type: 'info', text: '  whoami                  — your profile' },
+    { type: 'info', text: '  status                  — current mission / contract' },
+    { type: 'info', text: '  ping <ip>               — check if a host is reachable' },
+    { type: 'info', text: '  scan <ip>               — find open ports on a target' },
+    { type: 'info', text: '  connect <ip> <port>     — connect to a service' },
+    { type: 'info', text: '  disconnect              — end current connection' },
+    { type: 'info', text: '  crack                   — brute-force SSH password' },
   ];
-  if (showInject) lines.push({ type: 'info', text: '  inject              — SQL injection on web form' });
+  if (showInject)                            lines.push({ type: 'info', text: '  inject                  — SQL injection on web form' });
+  if (G.tools.includes('packet_sniffer'))    lines.push({ type: 'info', text: '  sniff                   — capture cleartext traffic on connection' });
+  if (G.tools.includes('fuzzer'))            lines.push({ type: 'info', text: '  fuzz                    — brute-force hidden HTTP endpoints' });
+  if (G.tools.includes('exploit_db'))        lines.push({ type: 'info', text: '  exploit <CVE-ID>        — deploy a known CVE exploit' });
   lines.push(
-    { type: 'info', text: '  ls                  — list files on connected server' },
-    { type: 'info', text: '  cat <file>          — read a file' },
-    { type: 'info', text: '  download <file>     — download a file' },
-    { type: 'info', text: '  crypto              — crypto balance' },
-    { type: 'info', text: '  shop                — browse the darknet marketplace' },
-    { type: 'info', text: '  bribe <type>        — spend crypto for shortcuts' },
-    { type: 'info', text: '  clear               — clear terminal' },
+    { type: 'info', text: '  ls                      — list files on connected server' },
+    { type: 'info', text: '  cat <file>              — read a file' },
+    { type: 'info', text: '  grep <pattern> <file>   — search inside a file' },
+    { type: 'info', text: '  download <file>         — download a file' },
+  );
+  if (G.tools.includes('cryptobreaker'))     lines.push({ type: 'info', text: '  decrypt <file.enc>      — decrypt an AES-256 encrypted file' });
+  if (G.tools.includes('steganographer'))    lines.push({ type: 'info', text: '  stego <image>           — extract hidden data from an image' });
+  if (G.tools.includes('log_wiper'))         lines.push({ type: 'info', text: '  wipe                    — scrub auth logs on current host' });
+  if (G.tools.includes('rootkit_mk2'))       lines.push({ type: 'info', text: '  persist                 — install persistent backdoor on host' });
+  lines.push({ type: 'info', text: '  exfil                   — bulk-download all files from target' });
+  lines.push(
+    { type: 'info', text: '  crypto                  — crypto balance' },
+    { type: 'info', text: '  shop                    — browse the darknet marketplace' },
+    { type: 'info', text: '  bribe <type>            — spend crypto for shortcuts' },
+    { type: 'info', text: '  clear                   — clear terminal' },
   );
   if (G.freeMode) {
     lines.push(
       { type: 'sys',  text: '' },
       { type: 'sys',  text: '[ FREE MODE ]' },
-      { type: 'info', text: '  quest               — get / show current contract' },
-      { type: 'info', text: '  story               — check for new story chapters' },
+      { type: 'info', text: '  quest                   — get / show current contract' },
+      { type: 'info', text: '  story                   — check for new story chapters' },
     );
   }
   await printLines(lines, 18);
@@ -270,14 +292,16 @@ async function cmdWhoami() {
   try { session = JSON.parse(localStorage.getItem('pg_session')); } catch {}
   const modNames = G.toolUpgrades.map(u => SHOP.upgrades.find(x => x.id === u)?.name ?? u);
   const lines = [
-    { type: 'ok',   text: `User:       ${session?.username || 'ghost'}` },
-    { type: 'info', text: `Mode:       ${G.freeMode ? 'Free Mode' : `Story — Act ${MISSIONS[G.missionIdx]?.act ?? '?'}`}` },
-    { type: 'info', text: `Crypto:     ${G.crypto}` },
-    { type: 'info', text: `Heat:       ${G.notoriety}%` },
-    { type: 'info', text: `Tools:      ${G.tools.join(', ')}` },
-    { type: 'info', text: `Story:      ${G.missionsDone.length} / ${MISSIONS.length} chapters` },
+    { type: 'ok',   text: `User:         ${session?.username || 'ghost'}` },
+    { type: 'info', text: `Mode:         ${G.freeMode ? 'Free Mode' : `Story — Act ${MISSIONS[G.missionIdx]?.act ?? '?'}`}` },
+    { type: 'info', text: `Crypto:       ${G.crypto}` },
+    { type: 'info', text: `Heat:         ${G.notoriety}%` },
+    { type: 'info', text: `Tools:        ${G.tools.join(', ')}` },
+    { type: 'info', text: `Story:        ${G.missionsDone.length} / ${MISSIONS.length} chapters` },
   ];
-  if (modNames.length) lines.push({ type: 'info', text: `Mods:       ${modNames.join(', ')}` });
+  if (modNames.length)              lines.push({ type: 'info', text: `Mods:         ${modNames.join(', ')}` });
+  if (G.wipedHosts.length)          lines.push({ type: 'info', text: `Wiped hosts:  ${G.wipedHosts.join(', ')}` });
+  if (G.persistedHosts.length)      lines.push({ type: 'info', text: `Backdoors:    ${G.persistedHosts.join(', ')}` });
   await printLines(lines, 20);
 }
 
@@ -514,6 +538,259 @@ async function cmdDownload(filename) {
   printLine(`[+] Downloaded: ${filename}`, 'out-ok');
 }
 
+// ── New commands ──────────────────────────────────────────────
+
+async function cmdPing(ip) {
+  if (!ip) { printLine('Usage: ping <ip>', 'out-err'); return; }
+  const target = getActiveTarget();
+  if (!target || ip !== target.ip) {
+    addTrace(3);
+    printLine(`[*] PING ${ip} — sending 4 ICMP echo requests...`, 'out-info');
+    await delay(600);
+    printLine(`[!] Request timeout for icmp_seq 0-3`, 'out-err');
+    printLine(`    0 packets received, 100% packet loss.`, 'out-dim');
+    return;
+  }
+  printLine(`[*] PING ${ip} (${target.hostname}) — 56 bytes of data`, 'out-info');
+  const rtts = [12, 11, 13, 12].map(r => r + Math.floor(Math.random() * 4));
+  for (const rtt of rtts) {
+    await delay(300);
+    printLine(`    64 bytes from ${ip}: icmp_seq=${rtts.indexOf(rtt)} ttl=64 time=${rtt} ms`, 'out-dim');
+  }
+  const avg = Math.round(rtts.reduce((a, b) => a + b) / rtts.length);
+  printLine(`[+] ${target.hostname} is up. avg RTT: ${avg} ms`, 'out-ok');
+}
+
+async function cmdSniff() {
+  if (!G.connected) { printLine('Not connected to any host.', 'out-err'); return; }
+  if (!G.tools.includes('packet_sniffer')) {
+    printLine('[!] Packet Sniffer not installed — buy it from the shop.', 'out-err'); return;
+  }
+  const target = getActiveTarget();
+  const captureFiles = target?.captureFiles;
+  if (!captureFiles || Object.keys(captureFiles).length === 0) {
+    addTrace(8);
+    printLine(`[*] Sniffing traffic on ${G.connected.ip}:${G.connected.port}...`, 'out-info');
+    await printProgress('[*] Capturing', 1500);
+    printLine('[*] No cleartext credentials detected in captured traffic.', 'out-dim');
+    return;
+  }
+  const hasDeep = G.toolUpgrades.includes('deep_packet');
+  printLine(`[*] Attaching sniffer to ${G.connected.service} stream on ${G.connected.ip}:${G.connected.port}...`, 'out-info');
+  if (hasDeep) printLine('[*] Deep Packet Inspector active — full protocol decode enabled.', 'out-dim');
+  await printProgress('[*] Capturing packets', hasDeep ? 1200 : 2200);
+  const count = 600 + Math.floor(Math.random() * 400);
+  printLine(`[+] Captured ${count} packets.`, 'out-ok');
+  addTrace(hasDeep ? 10 : 18);
+  for (const [fname, content] of Object.entries(captureFiles)) {
+    target.files[fname] = content;
+    await delay(200);
+    printLine(`[+] Cleartext credential stream detected — saved: ${fname}`, 'out-ok');
+  }
+  printLine('[*] Use "ls" to see captured files, then "download <file>".', 'out-dim');
+  await saveState();
+}
+
+async function cmdFuzz() {
+  if (!G.connected) { printLine('Not connected to any host.', 'out-err'); return; }
+  if (G.connected.service !== 'HTTP' && G.connected.service !== 'HTTPS') {
+    printLine('[!] fuzz only works on HTTP/HTTPS services.', 'out-err'); return;
+  }
+  if (!G.tools.includes('fuzzer')) {
+    printLine('[!] HTTP Fuzzer not installed — buy it from the shop.', 'out-err'); return;
+  }
+  if (G.connected.authed) { printLine('[*] Already have access on this connection.', 'out-dim'); return; }
+  const target = getActiveTarget();
+  const portInfo = target?.ports[G.connected.port];
+  if (!portInfo?.fuzzable) {
+    addTrace(12);
+    printLine('[!] No hidden endpoints found. Target may not be fuzzable.', 'out-err'); return;
+  }
+  const hasTurbo = G.toolUpgrades.includes('fuzz_turbo');
+  const duration  = hasTurbo ? 1800 : 3200;
+  const traceHit  = hasTurbo ? 18 : 28;
+  printLine(`[*] Starting HTTP directory fuzzing on ${G.connected.ip}:${G.connected.port}...`, 'out-info');
+  printLine(`[*] Wordlist: /usr/share/seclists/Discovery/Web-Content/common.txt`, 'out-dim');
+  printLine(`[*] Threads: ${hasTurbo ? 80 : 40}  |  Extensions: php,html,txt,db,json`, 'out-dim');
+  await printProgress('[*] Fuzzing', duration);
+  addTrace(traceHit);
+  if (target.fuzzFiles) {
+    for (const [fname, content] of Object.entries(target.fuzzFiles)) {
+      target.files[fname] = content;
+      await delay(150);
+      printLine(`[+] Found: /admin/${fname}  [200 OK]`, 'out-ok');
+    }
+  }
+  G.connected.authed = true;
+  updateHUD(); updateSidebar();
+  printLine('[+] Admin panel access gained. Shell authenticated.', 'out-ok');
+  printLine('[*] Use "ls" to list discovered files.', 'out-dim');
+  await saveState();
+}
+
+async function cmdExploit(cve) {
+  if (!cve) { printLine('Usage: exploit <CVE-ID>  (e.g. exploit CVE-2023-38408)', 'out-err'); return; }
+  if (!G.connected) { printLine('Not connected to any host.', 'out-err'); return; }
+  if (!G.tools.includes('exploit_db')) {
+    printLine('[!] ExploitDB Client not installed — buy it from the shop.', 'out-err'); return;
+  }
+  if (G.connected.authed) { printLine('[*] Already authenticated.', 'out-dim'); return; }
+  const portInfo = getActiveTarget()?.ports[G.connected.port];
+  const hasZeroDay = G.toolUpgrades.includes('zero_day');
+  if (!hasZeroDay && portInfo?.cve?.toUpperCase() !== cve.toUpperCase()) {
+    addTrace(20);
+    printLine(`[!] Exploit failed — ${cve} does not match this service's vulnerability profile.`, 'out-err');
+    printLine('[*] Scan the target first to identify the correct CVE.', 'out-dim');
+    return;
+  }
+  const matchedCve = portInfo?.cve || cve;
+  printLine(`[*] Loading exploit module for ${matchedCve}...`, 'out-info');
+  await delay(400);
+  if (matchedCve.toUpperCase() === 'CVE-2023-38408') {
+    printLine('[*] Target: OpenSSH ssh-agent forwarding RCE', 'out-dim');
+    printLine('[*] Triggering malicious PKCS#11 library load via agent socket...', 'out-dim');
+  }
+  await printProgress('[*] Exploiting', 2800);
+  addTrace(35);
+  G.connected.authed = true;
+  updateHUD(); updateSidebar();
+  printLine(`[+] ${matchedCve} — exploit successful. Root shell obtained.`, 'out-ok');
+  printLine('[+] Authentication bypassed via remote code execution.', 'out-ok');
+  await saveState();
+}
+
+async function cmdDecrypt(filename) {
+  if (!filename) { printLine('Usage: decrypt <file.enc>', 'out-err'); return; }
+  if (!G.connected?.authed) { printLine('[!] Not authenticated.', 'out-err'); return; }
+  if (!G.tools.includes('cryptobreaker')) {
+    printLine('[!] CryptoBreaker not installed — buy it from the shop.', 'out-err'); return;
+  }
+  if (!filename.endsWith('.enc')) {
+    printLine('[!] decrypt only works on .enc files.', 'out-err'); return;
+  }
+  const target = getActiveTarget();
+  if (!target?.files?.[filename]) { addTrace(3); printLine(`[!] File not found: ${filename}`, 'out-err'); return; }
+  const entry = target?.decryptedFiles?.[filename];
+  if (!entry) {
+    addTrace(10);
+    printLine('[!] No key material found for this file. Obtain the encryption key first.', 'out-err');
+    return;
+  }
+  printLine(`[*] Loading key derivation from helios_key.bin...`, 'out-info');
+  await delay(400);
+  printLine(`[*] Cipher: AES-256-CBC  |  Mode: PBKDF2 key derivation`, 'out-dim');
+  await printProgress('[*] Decrypting', 2200);
+  addTrace(12);
+  target.files[entry.name] = entry.content;
+  printLine(`[+] Decryption successful — output: ${entry.name}`, 'out-ok');
+  printLine('[*] Use "download ' + entry.name + '" to retrieve the file.', 'out-dim');
+  await saveState();
+}
+
+async function cmdWipe() {
+  if (!G.connected?.authed) { printLine('[!] Not authenticated.', 'out-err'); return; }
+  if (!G.tools.includes('log_wiper')) {
+    printLine('[!] Log Wiper not installed — buy it from the shop.', 'out-err'); return;
+  }
+  const ip = G.connected.ip;
+  if (G.wipedHosts.includes(ip)) { printLine('[*] Logs already wiped on this host.', 'out-dim'); return; }
+  printLine('[*] Initiating log scrub on remote host...', 'out-info');
+  await delay(300);
+  const logs = ['/var/log/auth.log', '/var/log/wtmp', '/var/log/lastlog', '/var/log/syslog', '/root/.bash_history'];
+  for (const log of logs) {
+    await delay(220);
+    printLine(`[*] Truncating ${log}...`, 'out-dim');
+  }
+  await printProgress('[*] Overwriting inodes', 1400);
+  addTrace(15);
+  G.wipedHosts.push(ip);
+  await saveState();
+  printLine(`[+] All auth logs wiped on ${ip}. Evidence destroyed.`, 'out-ok');
+}
+
+async function cmdStego(filename) {
+  if (!filename) { printLine('Usage: stego <imagefile>', 'out-err'); return; }
+  if (!G.connected?.authed) { printLine('[!] Not authenticated.', 'out-err'); return; }
+  if (!G.tools.includes('steganographer')) {
+    printLine('[!] Steganographer not installed — buy it from the shop.', 'out-err'); return;
+  }
+  const target = getActiveTarget();
+  if (!target?.files?.[filename]) { addTrace(3); printLine(`[!] File not found: ${filename}`, 'out-err'); return; }
+  const entry = target?.stegoFiles?.[filename];
+  if (!entry) {
+    addTrace(5);
+    printLine(`[*] Running LSB steganalysis on ${filename}...`, 'out-info');
+    await printProgress('[*] Scanning pixel channels', 1200);
+    printLine('[*] No hidden payload detected in this image.', 'out-dim');
+    return;
+  }
+  printLine(`[*] Running LSB steganalysis on ${filename}...`, 'out-info');
+  printLine('[*] Scanning R/G/B channels at 1-bit and 2-bit depth...', 'out-dim');
+  await printProgress('[*] Extracting', 1800);
+  addTrace(10);
+  target.files[entry.name] = entry.content;
+  if (!G.downloadedFiles.includes(entry.name)) G.downloadedFiles.push(entry.name);
+  await saveState();
+  printLine(`[+] Hidden payload found and extracted: ${entry.name}`, 'out-ok');
+  printLine(`[*] File auto-saved to downloads.`, 'out-dim');
+}
+
+async function cmdPersist() {
+  if (!G.connected?.authed) { printLine('[!] Not authenticated.', 'out-err'); return; }
+  if (!G.tools.includes('rootkit_mk2')) {
+    printLine('[!] Rootkit Mk.II not installed — buy it from the shop.', 'out-err'); return;
+  }
+  const ip = G.connected.ip;
+  if (G.persistedHosts.includes(ip)) { printLine('[*] Backdoor already installed on this host.', 'out-dim'); return; }
+  printLine('[*] Deploying Rootkit Mk.II...', 'out-info');
+  await delay(300);
+  printLine('[*] Writing SSH key to /root/.ssh/authorized_keys...', 'out-dim');
+  await delay(400);
+  printLine('[*] Installing cron re-installer at /etc/cron.d/sysupdate...', 'out-dim');
+  await delay(400);
+  printLine('[*] Patching PAM module for silent auth bypass...', 'out-dim');
+  await printProgress('[*] Hardening persistence', 1600);
+  addTrace(30);
+  G.persistedHosts.push(ip);
+  await saveState();
+  printLine(`[+] Persistent backdoor installed on ${ip}.`, 'out-ok');
+  printLine('[+] Future "connect" to this host will auto-authenticate.', 'out-dim');
+}
+
+async function cmdExfil() {
+  if (!G.connected?.authed) { printLine('[!] Not authenticated.', 'out-err'); return; }
+  const target = getActiveTarget();
+  const files = target?.files;
+  if (!files || Object.keys(files).length === 0) { printLine('[!] No files on target.', 'out-dim'); return; }
+  const toDownload = Object.keys(files).filter(f => !G.downloadedFiles.includes(f));
+  if (toDownload.length === 0) { printLine('[*] All files already downloaded.', 'out-dim'); return; }
+  printLine(`[*] Starting bulk exfil — ${toDownload.length} file(s)...`, 'out-info');
+  await delay(300);
+  for (const fname of toDownload) {
+    await delay(180);
+    const size = (files[fname].length * 1.1).toFixed(0);
+    printLine(`[*] Transferring ${fname.padEnd(38)} ${size} bytes`, 'out-dim');
+    G.downloadedFiles.push(fname);
+    addTrace(4);
+  }
+  await saveState();
+  printLine(`[+] Exfil complete — ${toDownload.length} file(s) downloaded.`, 'out-ok');
+}
+
+async function cmdGrep(pattern, filename) {
+  if (!pattern || !filename) { printLine('Usage: grep <pattern> <file>', 'out-err'); return; }
+  if (!G.connected?.authed) { printLine('[!] Not authenticated.', 'out-err'); return; }
+  const content = getActiveTarget()?.files?.[filename];
+  if (content === undefined) { addTrace(2); printLine(`[!] File not found: ${filename}`, 'out-err'); return; }
+  const regex   = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  const matches = content.split('\n').filter(line => regex.test(line));
+  if (matches.length === 0) {
+    printLine(`[*] grep: no matches for "${pattern}" in ${filename}`, 'out-dim'); return;
+  }
+  printLine(`[*] grep ${pattern} ${filename}  — ${matches.length} match(es):`, 'out-info');
+  for (const line of matches) { await delay(25); printLine(`    ${line}`, 'out-ok'); }
+}
+
 // ── Completion ────────────────────────────────────────────────
 
 function checkMissionComplete() {
@@ -725,6 +1002,44 @@ async function applyBribe(id, item) {
       printLine(`    ${name.padEnd(32)} ${(content.length * 1.1).toFixed(0)} bytes`, 'out-info');
     }
     await saveState();
+  } else if (id === 'cleaner') {
+    if (!G.connected?.authed) {
+      printLine('[!] Must be authenticated on a target to use The Cleaner.', 'out-err');
+      G.crypto += item.price; // refund
+      return;
+    }
+    const ip = G.connected.ip;
+    if (G.wipedHosts.includes(ip)) { printLine('[*] Logs already clean on this host.', 'out-dim'); G.crypto += item.price; return; }
+    printLine(`[+] ${item.name}: Professional log sanitiser dispatched.`, 'out-ok');
+    await delay(800);
+    G.wipedHosts.push(ip);
+    await saveState();
+    printLine(`[+] All auth logs wiped on ${ip}.`, 'out-ok');
+  } else if (id === 'mole') {
+    const target = getActiveTarget();
+    if (!target) {
+      printLine('[!] No active target for The Mole.', 'out-err');
+      G.crypto += item.price; // refund
+      return;
+    }
+    printLine(`[+] ${item.name}: Insider contact activated.`, 'out-ok');
+    await delay(600);
+    printLine(`[*] Hidden intel on ${target.hostname}:`, 'out-dim');
+    for (const [port, info] of Object.entries(target.ports)) {
+      await delay(50);
+      printLine(`    Port ${String(port).padEnd(6)} ${info.service.padEnd(8)} ${info.hidden ? '[STEALTH] ' : '[OPEN]    '} ${info.banner}`, 'out-info');
+    }
+    if (target.captureFiles) {
+      for (const fname of Object.keys(target.captureFiles)) {
+        printLine(`    [HINT] captureFile: ${fname} — use "sniff"`, 'out-dim');
+      }
+    }
+    if (target.fuzzFiles) {
+      for (const fname of Object.keys(target.fuzzFiles)) {
+        printLine(`    [HINT] hiddenFile: ${fname} — use "fuzz"`, 'out-dim');
+      }
+    }
+    await saveState();
   }
 }
 
@@ -740,15 +1055,23 @@ async function cmdBribe(type) {
     intel:    'intel_drop',
     files:    'intel_drop',
     info:     'intel_drop',
+    cleaner:  'cleaner',
+    logs:     'cleaner',
+    wipe:     'cleaner',
+    mole:     'mole',
+    ports:    'mole',
+    recon:    'mole',
   };
   const id = aliases[type?.toLowerCase()];
   if (!id) {
     await printLines([
       { type: 'sys',  text: '[ BRIBE SHORTCUTS ]' },
-      { type: 'info', text: '  bribe trace    — flush current trace (120 CRYPTO)' },
+      { type: 'info', text: '  bribe trace    — flush current trace to 0 (120 CRYPTO)' },
       { type: 'info', text: '  bribe fixer    — reduce heat by 20 (250 CRYPTO)' },
       { type: 'info', text: '  bribe insider  — auto-auth active connection (200 CRYPTO)' },
       { type: 'info', text: '  bribe intel    — reveal all files on current target (150 CRYPTO)' },
+      { type: 'info', text: '  bribe cleaner  — wipe logs on current host (350 CRYPTO)' },
+      { type: 'info', text: '  bribe mole     — reveal all ports and hidden files (280 CRYPTO)' },
       { type: 'dim',  text: '  Use "shop bribes" for full details.' },
     ], 18);
     return;
