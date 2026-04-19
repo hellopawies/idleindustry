@@ -438,34 +438,26 @@ async function loadUsersTable() {
   }
 
   function renderRow(u) {
-    if (u.is_admin) {
-      return `<tr>
-        <td><strong>${escHtml(u.username)}</strong><span class="admin-badge">ADMIN</span></td>
-        <td><span style="color:var(--muted);font-size:0.82rem;">—</span></td>
-        <td class="money-cell">—</td>
-        <td class="time-cell">—</td>
-        <td style="display:flex;gap:6px;flex-wrap:wrap;">
-          <button class="btn-del" style="border-color:var(--yellow);color:var(--yellow);" onclick="toggleAdminStatus('${u.user_id}','${escHtml(u.username)}',false)">Revoke Admin</button>
-          <button class="btn-del" onclick="confirmDeleteUser('${u.user_id}','${escHtml(u.username)}')">Delete</button>
-        </td>
-      </tr>`;
-    }
-    const rid  = u.rank_id ?? 0;
-    const opts = RANKS.map((r, i) =>
+    const isSelf = u.user_id === currentUserId;
+    const rid    = u.rank_id ?? 0;
+    const opts   = RANKS.map((r, i) =>
       `<option value="${i}" ${i === rid ? "selected" : ""}>${r.emoji} ${escHtml(r.name)}</option>`
     ).join("");
-    return `<tr>
-      <td><strong>${escHtml(u.username)}</strong></td>
+    const adminBadge = u.is_admin ? `<span class="admin-badge">ADMIN</span>` : "";
+    const actions = `
+      <button class="btn-del" style="border-color:var(--green);color:var(--green);" onclick="openSetMoney('${u.user_id}','${escHtml(u.username)}',${u.money ?? 0})">Set $</button>
+      <button class="btn-del" style="border-color:var(--yellow);color:var(--yellow);" onclick="confirmResetSave('${u.user_id}','${escHtml(u.username)}')">Reset Save</button>
+      <button class="btn-del" style="border-color:var(--accent);color:var(--accent-hover);" onclick="openResetPw('${u.user_id}','${escHtml(u.username)}')">Reset PW</button>
+      ${!isSelf && u.is_admin  ? `<button class="btn-del" style="border-color:var(--yellow);color:var(--yellow);" onclick="toggleAdminStatus('${u.user_id}','${escHtml(u.username)}',false)">Revoke Admin</button>` : ""}
+      ${!isSelf && !u.is_admin ? `<button class="btn-del" style="border-color:var(--muted);color:var(--muted);" onclick="toggleAdminStatus('${u.user_id}','${escHtml(u.username)}',true)">Make Admin</button>` : ""}
+      ${!isSelf               ? `<button class="btn-del" onclick="confirmDeleteUser('${u.user_id}','${escHtml(u.username)}')">Delete</button>` : ""}
+    `;
+    return `<tr${isSelf ? ' style="background:rgba(108,99,255,0.07)"' : ""}>
+      <td><strong>${escHtml(u.username)}</strong>${adminBadge}${isSelf ? '<span style="font-size:0.7rem;color:var(--muted);margin-left:4px;">(you)</span>' : ""}</td>
       <td><select class="rank-select" data-uid="${u.user_id}">${opts}</select></td>
       <td class="money-cell">${u.money != null ? fmt(u.money) : "—"}</td>
       <td class="time-cell">${u.last_save ? new Date(u.last_save).toLocaleString() : "Never"}</td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="btn-del" style="border-color:var(--green);color:var(--green);" onclick="openSetMoney('${u.user_id}','${escHtml(u.username)}',${u.money ?? 0})">Set $</button>
-        <button class="btn-del" style="border-color:var(--yellow);color:var(--yellow);" onclick="confirmResetSave('${u.user_id}','${escHtml(u.username)}')">Reset Save</button>
-        <button class="btn-del" style="border-color:var(--accent);color:var(--accent-hover);" onclick="openResetPw('${u.user_id}','${escHtml(u.username)}')">Reset PW</button>
-        <button class="btn-del" style="border-color:var(--muted);color:var(--muted);" onclick="toggleAdminStatus('${u.user_id}','${escHtml(u.username)}',true)">Make Admin</button>
-        <button class="btn-del" onclick="confirmDeleteUser('${u.user_id}','${escHtml(u.username)}')">Delete</button>
-      </td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">${actions}</td>
     </tr>`;
   }
 
