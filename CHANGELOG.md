@@ -4,6 +4,29 @@
 
 ## 2026-04-19
 
+### Hacker Story — v1.0.0
+- 3 new story missions: Act 1 M3 (The Architect), Act 2 M1 (The Broker), Act 2 M2 (Black Ice)
+- 3 new tools with gameplay effects: Proxy Basic (–35% trace), Port Scanner Pro (reveals stealth ports), Bruteforce v2 (high-complexity SSH)
+- Mid-mission and quest progress now saved to cloud — refresh resumes exactly where you left off
+- Trace and heat persist across page refreshes
+- Fixed quest save race condition (saves now awaited before continuing)
+- Tighter terminal line spacing
+
+### Hacker Story — v0.3.0
+- Free Mode: random anonymous contracts after story chapters run out
+- Two contract types gated by tool loadout: SSH exfiltration and SQL injection
+- `story` command checks for new chapters; `quest` command manages contracts
+
+### Hacker Story — v0.2.0
+- Hub-style header with Trace and Heat meters
+- Act/mission shown in header pill; mobile layout fixed
+
+### Hacker Story — v0.1.0 (Initial Launch)
+- Terminal hacking game with 2 story missions following the Project Helios conspiracy
+- Commands: scan, connect, crack, inject, ls, cat, download
+- Trace meter + Heat (notoriety) system
+- Cloud save from day one
+
 ### Idle Industry — v1.0.0
 - Offline Earnings Receipt: returning players see a per-industry breakdown of what they earned while away
 
