@@ -2,6 +2,7 @@ const G = {
   missionIdx:      0,
   missionsDone:    [],
   tools:           ['basic_cracker'],
+  toolUpgrades:    [],
   crypto:          0,
   notoriety:       0,
   freeMode:        false,
@@ -40,6 +41,7 @@ function applyPayload(saved) {
   G.missionIdx      = saved.missionIdx      ?? 0;
   G.missionsDone    = saved.missionsDone    ?? [];
   G.tools           = saved.tools           ?? ['basic_cracker'];
+  G.toolUpgrades    = saved.toolUpgrades    ?? [];
   G.crypto          = saved.crypto          ?? 0;
   G.notoriety       = saved.notoriety       ?? 0;
   G.freeMode        = saved.freeMode        ?? (G.missionIdx >= MISSIONS.length);
@@ -70,6 +72,7 @@ async function saveState() {
     missionIdx:       G.missionIdx,
     missionsDone:     G.missionsDone,
     tools:            G.tools,
+    toolUpgrades:     G.toolUpgrades,
     crypto:           G.crypto,
     notoriety:        G.notoriety,
     freeMode:         G.freeMode,
@@ -209,6 +212,9 @@ async function handleCommand(raw) {
       case 'cat':        await cmdCat(args[0]);              break;
       case 'download':   await cmdDownload(args[0]);         break;
       case 'crypto':     printLine(`Wallet: ${G.crypto} CRYPTO`, 'out-ok'); break;
+      case 'shop':
+      case 'store':      await cmdShop(args);                break;
+      case 'bribe':      await cmdBribe(args[0]);            break;
       default:
         printLine(`Command not found: ${cmd}  — type "help"`, 'out-err');
     }
@@ -238,6 +244,8 @@ async function cmdHelp() {
     { type: 'info', text: '  cat <file>          — read a file' },
     { type: 'info', text: '  download <file>     — download a file' },
     { type: 'info', text: '  crypto              — crypto balance' },
+    { type: 'info', text: '  shop                — browse the darknet marketplace' },
+    { type: 'info', text: '  bribe <type>        — spend crypto for shortcuts' },
     { type: 'info', text: '  clear               — clear terminal' },
   );
   if (G.freeMode) {
@@ -254,14 +262,17 @@ async function cmdHelp() {
 async function cmdWhoami() {
   let session;
   try { session = JSON.parse(localStorage.getItem('pg_session')); } catch {}
-  await printLines([
+  const modNames = G.toolUpgrades.map(u => SHOP.upgrades.find(x => x.id === u)?.name ?? u);
+  const lines = [
     { type: 'ok',   text: `User:       ${session?.username || 'ghost'}` },
     { type: 'info', text: `Mode:       ${G.freeMode ? 'Free Mode' : `Story — Act ${MISSIONS[G.missionIdx]?.act ?? '?'}`}` },
     { type: 'info', text: `Crypto:     ${G.crypto}` },
     { type: 'info', text: `Heat:       ${G.notoriety}%` },
     { type: 'info', text: `Tools:      ${G.tools.join(', ')}` },
     { type: 'info', text: `Story:      ${G.missionsDone.length} / ${MISSIONS.length} chapters` },
-  ], 20);
+  ];
+  if (modNames.length) lines.push({ type: 'info', text: `Mods:       ${modNames.join(', ')}` });
+  await printLines(lines, 20);
 }
 
 async function cmdStatus() {
@@ -408,12 +419,18 @@ async function cmdCrack() {
     addTrace(12); printLine('[!] Password complexity too high. Bruteforce v2 required.', 'out-err'); return;
   }
 
-  const duration = portInfo.complexity === 'high' ? 3500 : portInfo.complexity === 'medium' ? 2800 : 2000;
-  const label    = portInfo.complexity === 'high' ? '[*] GPU brute force' : '[*] Trying common passwords';
+  const hasElite   = G.toolUpgrades.includes('wordlist_elite');
+  const hasCluster = G.toolUpgrades.includes('gpu_cluster');
+  const duration = portInfo.complexity === 'high'   ? (hasCluster ? 1800 : 3500)
+                 : portInfo.complexity === 'medium'  ? (hasElite   ? 1400 : 2800) : 2000;
+  const traceHit = portInfo.complexity === 'high'   ? (hasCluster ? 16 : 30)
+                 : portInfo.complexity === 'medium'  ? (hasElite   ?  8 : 20) : 20;
+  const label    = portInfo.complexity === 'high'   ? (hasCluster ? '[*] Distributed GPU crack' : '[*] GPU brute force')
+                 : '[*] Trying common passwords';
   printLine('[*] Initiating brute force on SSH service...', 'out-info');
   await printProgress(label, duration);
   G.connected.authed = true;
-  addTrace(portInfo.complexity === 'high' ? 30 : 20);
+  addTrace(traceHit);
   updateHUD(); updateSidebar();
   printLine(`[+] Password found: ${portInfo.password}`, 'out-ok');
   printLine('[+] Authentication successful. Shell access granted.', 'out-ok');
@@ -425,7 +442,9 @@ async function cmdInject() {
   if (G.connected.authed)                                                  { printLine('[*] Already have database access.', 'out-dim'); return; }
 
   const portInfo = getActiveTarget()?.ports[G.connected.port];
-  if (!portInfo?.injectable) { addTrace(10); printLine('[!] No injectable endpoint detected on this service.', 'out-err'); return; }
+  if (!portInfo?.injectable && !G.toolUpgrades.includes('exploit_kit')) {
+    addTrace(10); printLine('[!] No injectable endpoint. Exploit Kit required for hardened targets.', 'out-err'); return;
+  }
 
   printLine("[*] Probing login form for SQL injection...", 'out-info');
   await delay(500);
@@ -527,10 +546,202 @@ async function completeQuest(quest) {
   setBusy(false);
 }
 
+// ── Shop ──────────────────────────────────────────────────────
+
+async function cmdShop(args) {
+  const sub = (args[0] ?? '').toLowerCase();
+
+  if (!sub || sub === 'help') {
+    await printLines([
+      { type: 'sys',  text: '[ DARKNET MARKETPLACE ]' },
+      { type: 'dim',  text: `  Wallet: ${G.crypto} CRYPTO` },
+      { type: 'info', text: '' },
+      { type: 'info', text: '  shop tools           — hacking tools for sale' },
+      { type: 'info', text: '  shop upgrades        — upgrade your existing tools' },
+      { type: 'info', text: '  shop bribes          — bribe contacts for shortcuts' },
+      { type: 'info', text: '  shop buy <id>        — purchase item by ID' },
+    ], 18);
+    return;
+  }
+  if (sub === 'tools')    { await shopListTools();    return; }
+  if (sub === 'upgrades') { await shopListUpgrades(); return; }
+  if (sub === 'bribes')   { await shopListBribes();   return; }
+  if (sub === 'buy')      { await shopBuy(args[1]);   return; }
+  printLine(`Unknown shop command: ${sub}  — try "shop"`, 'out-err');
+}
+
+async function shopListTools() {
+  const lines = [
+    { type: 'sys',  text: '[ TOOLS FOR SALE ]' },
+    { type: 'dim',  text: `  Wallet: ${G.crypto} CRYPTO` },
+    { type: 'info', text: '' },
+  ];
+  for (const item of SHOP.tools) {
+    const owned = G.tools.includes(item.id);
+    const status = owned ? '  [OWNED]          ' : `  ${item.price} CRYPTO`;
+    const cls = owned ? 'out-dim' : (G.crypto >= item.price ? 'out-info' : 'out-warn');
+    lines.push({ type: owned ? 'dim' : (G.crypto >= item.price ? 'ok' : 'warn'),
+      text: `  ${item.id.padEnd(20)} ${String(item.price).padEnd(6)} CRYPTO  ${owned ? '[OWNED]' : ''}` });
+    if (!owned) lines.push({ type: 'dim', text: `    ${item.desc}  →  shop buy ${item.id}` });
+  }
+  await printLines(lines, 16);
+}
+
+async function shopListUpgrades() {
+  const lines = [
+    { type: 'sys',  text: '[ TOOL UPGRADES ]' },
+    { type: 'dim',  text: `  Wallet: ${G.crypto} CRYPTO` },
+    { type: 'info', text: '' },
+  ];
+  for (const item of SHOP.upgrades) {
+    const owned     = G.toolUpgrades.includes(item.id);
+    const hasBase   = G.tools.includes(item.requires);
+    const canBuy    = !owned && hasBase && G.crypto >= item.price;
+    lines.push({
+      type: owned ? 'dim' : (hasBase ? (canBuy ? 'ok' : 'warn') : 'dim'),
+      text: `  ${item.id.padEnd(20)} ${String(item.price).padEnd(6)} CRYPTO  ${owned ? '[INSTALLED]' : !hasBase ? `[need ${item.requires}]` : ''}`,
+    });
+    if (!owned) lines.push({ type: 'dim', text: `    ${item.desc}  →  shop buy ${item.id}` });
+  }
+  await printLines(lines, 16);
+}
+
+async function shopListBribes() {
+  const lines = [
+    { type: 'sys',  text: '[ BRIBE CONTACTS ]' },
+    { type: 'dim',  text: `  Wallet: ${G.crypto} CRYPTO` },
+    { type: 'info', text: '' },
+  ];
+  for (const item of SHOP.bribes) {
+    const canAfford = G.crypto >= item.price;
+    lines.push({
+      type: canAfford ? 'ok' : 'warn',
+      text: `  ${item.id.padEnd(20)} ${String(item.price).padEnd(6)} CRYPTO`,
+    });
+    lines.push({ type: 'dim', text: `    ${item.desc}  →  shop buy ${item.id}` });
+  }
+  await printLines(lines, 16);
+}
+
+async function shopBuy(id) {
+  if (!id) { printLine('Usage: shop buy <id>', 'out-err'); return; }
+
+  // ── Tools ──
+  const toolItem = SHOP.tools.find(t => t.id === id);
+  if (toolItem) {
+    if (G.tools.includes(id)) { printLine(`[*] You already own ${toolItem.name}.`, 'out-dim'); return; }
+    if (G.crypto < toolItem.price) { printLine(`[!] Insufficient funds. Need ${toolItem.price} CRYPTO, have ${G.crypto}.`, 'out-err'); return; }
+    G.crypto -= toolItem.price;
+    G.tools.push(id);
+    await saveState(); updateSidebar(); updateHUD();
+    printLine(`[+] Purchased: ${toolItem.name}`, 'out-ok');
+    printLine(`    ${toolItem.desc}`, 'out-dim');
+    return;
+  }
+
+  // ── Upgrades ──
+  const upItem = SHOP.upgrades.find(u => u.id === id);
+  if (upItem) {
+    if (G.toolUpgrades.includes(id)) { printLine(`[*] ${upItem.name} is already installed.`, 'out-dim'); return; }
+    if (!G.tools.includes(upItem.requires)) { printLine(`[!] Requires ${upItem.requires} first.`, 'out-err'); return; }
+    if (G.crypto < upItem.price) { printLine(`[!] Insufficient funds. Need ${upItem.price} CRYPTO, have ${G.crypto}.`, 'out-err'); return; }
+    G.crypto -= upItem.price;
+    G.toolUpgrades.push(id);
+    await saveState(); updateSidebar(); updateHUD();
+    printLine(`[+] Installed: ${upItem.name}`, 'out-ok');
+    printLine(`    ${upItem.desc}`, 'out-dim');
+    return;
+  }
+
+  // ── Bribes ──
+  const brItem = SHOP.bribes.find(b => b.id === id);
+  if (brItem) {
+    if (G.crypto < brItem.price) { printLine(`[!] Insufficient funds. Need ${brItem.price} CRYPTO, have ${G.crypto}.`, 'out-err'); return; }
+    G.crypto -= brItem.price;
+    printLine(`[*] Contacting ${brItem.name}...`, 'out-dim');
+    await delay(800);
+    await applyBribe(id, brItem);
+    return;
+  }
+
+  printLine(`[!] Unknown item: ${id}  — type "shop" to browse.`, 'out-err');
+}
+
+async function applyBribe(id, item) {
+  if (id === 'ghost_protocol') {
+    G.trace = 0;
+    await saveState(); updateHUD();
+    printLine(`[+] ${item.name}: Trace flushed to 0.`, 'out-ok');
+  } else if (id === 'fixer') {
+    const reduced = Math.min(20, G.notoriety);
+    G.notoriety = Math.max(0, G.notoriety - 20);
+    await saveState(); updateHUD(); updateSidebar();
+    printLine(`[+] ${item.name}: Heat reduced by ${reduced}. Now at ${G.notoriety}%.`, 'out-ok');
+  } else if (id === 'insider') {
+    if (!G.connected) {
+      printLine('[!] Not connected to any target — connect first, then bribe the insider.', 'out-err');
+      G.crypto += item.price; // refund
+      return;
+    }
+    if (G.connected.authed) { printLine('[*] Already authenticated on this connection.', 'out-dim'); G.crypto += item.price; return; }
+    G.connected.authed = true;
+    updateSidebar();
+    await saveState();
+    printLine(`[+] ${item.name}: Admin bribed. Shell access granted on ${G.connected.ip}:${G.connected.port}.`, 'out-ok');
+  } else if (id === 'intel_drop') {
+    const target = getActiveTarget();
+    if (!target) {
+      printLine('[!] No active target to get intel on.', 'out-err');
+      G.crypto += item.price; // refund
+      return;
+    }
+    printLine(`[+] ${item.name}: Anonymous tip received.`, 'out-ok');
+    printLine(`[*] Files on ${target.hostname}:`, 'out-dim');
+    for (const [name, content] of Object.entries(target.files)) {
+      await delay(35);
+      printLine(`    ${name.padEnd(32)} ${(content.length * 1.1).toFixed(0)} bytes`, 'out-info');
+    }
+    await saveState();
+  }
+}
+
+async function cmdBribe(type) {
+  const aliases = {
+    trace:    'ghost_protocol',
+    ghost:    'ghost_protocol',
+    flush:    'ghost_protocol',
+    heat:     'fixer',
+    fixer:    'fixer',
+    admin:    'insider',
+    insider:  'insider',
+    intel:    'intel_drop',
+    files:    'intel_drop',
+    info:     'intel_drop',
+  };
+  const id = aliases[type?.toLowerCase()];
+  if (!id) {
+    await printLines([
+      { type: 'sys',  text: '[ BRIBE SHORTCUTS ]' },
+      { type: 'info', text: '  bribe trace    — flush current trace (120 CRYPTO)' },
+      { type: 'info', text: '  bribe fixer    — reduce heat by 20 (250 CRYPTO)' },
+      { type: 'info', text: '  bribe insider  — auto-auth active connection (200 CRYPTO)' },
+      { type: 'info', text: '  bribe intel    — reveal all files on current target (150 CRYPTO)' },
+      { type: 'dim',  text: '  Use "shop bribes" for full details.' },
+    ], 18);
+    return;
+  }
+  await shopBuy(id);
+}
+
 // ── Trace ─────────────────────────────────────────────────────
 
 function addTrace(amount) {
-  const effective = G.tools.includes('proxy_basic') ? Math.round(amount * 0.65) : amount;
+  let effective = amount;
+  if (G.tools.includes('proxy_basic')) {
+    effective = G.toolUpgrades.includes('proxy_chain')
+      ? Math.round(amount * 0.40)
+      : Math.round(amount * 0.65);
+  }
   G.trace = Math.min(100, G.trace + effective);
   updateHUD();
   if (G.trace >= 100) triggerTraceBurn();
@@ -596,6 +807,18 @@ function updateSidebar() {
     conn ? `${conn.ip}:${conn.port} (${conn.authed ? '✓ authed' : 'no auth'})` : 'Offline';
   document.getElementById('sb-tools').innerHTML =
     G.tools.map(t => `<span class="tool-chip">${TOOLS[t]?.name ?? t}</span>`).join('');
+  const modsEl = document.getElementById('sb-mods');
+  const modsSection = document.getElementById('sb-mods-section');
+  if (G.toolUpgrades.length) {
+    modsEl.innerHTML = G.toolUpgrades
+      .map(u => SHOP.upgrades.find(x => x.id === u))
+      .filter(Boolean)
+      .map(u => `<span class="tool-chip" style="border-color:#6c63ff;color:#6c63ff">${u.name}</span>`)
+      .join('');
+    modsSection.style.display = '';
+  } else {
+    modsSection.style.display = 'none';
+  }
 }
 
 init();

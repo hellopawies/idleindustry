@@ -7,6 +7,29 @@ const TOOLS = {
   bruteforce_v2:    { name: 'Bruteforce v2',     desc: 'GPU-accelerated cracker. Handles high-complexity passwords.' },
 };
 
+// ── Darknet Shop ──────────────────────────────────────────────
+const SHOP = {
+  tools: [
+    { id: 'wordlist_pro',     price: 180, name: 'Wordlist Pro',     desc: 'Cracks medium-complexity SSH passwords.' },
+    { id: 'sqli_kit',         price: 240, name: 'SQLi Kit',         desc: 'SQL injection toolkit for web login forms.' },
+    { id: 'proxy_basic',      price: 300, name: 'Basic Proxy',      desc: 'Reduces all trace gain by 35%.' },
+    { id: 'port_scanner_pro', price: 400, name: 'Port Scanner Pro', desc: 'Reveals stealth ports hidden from basic scan.' },
+    { id: 'bruteforce_v2',    price: 550, name: 'Bruteforce v2',    desc: 'GPU cracker — handles high-complexity passwords.' },
+  ],
+  upgrades: [
+    { id: 'proxy_chain',    requires: 'proxy_basic',      price: 450, name: 'Proxy Chain',    desc: 'Triple-hop routing — boosts trace reduction from 35% to 60%.' },
+    { id: 'wordlist_elite', requires: 'wordlist_pro',     price: 380, name: 'Wordlist Elite',  desc: 'Optimised chains — medium SSH crack faster and lower trace.' },
+    { id: 'exploit_kit',   requires: 'sqli_kit',         price: 600, name: 'Exploit Kit',     desc: 'Zero-days included — inject works on hardened web targets.' },
+    { id: 'gpu_cluster',   requires: 'bruteforce_v2',    price: 700, name: 'GPU Cluster',     desc: 'Distributed nodes — high-complexity crack twice as fast.' },
+  ],
+  bribes: [
+    { id: 'ghost_protocol', price: 120, name: 'Ghost Protocol', desc: 'Flush your current trace to 0. Use any time mid-op.' },
+    { id: 'fixer',          price: 250, name: 'Fixer',          desc: 'Crooked contact scrubs 20 heat off your record.' },
+    { id: 'insider',        price: 200, name: 'Insider',        desc: 'Bribe a target sysadmin — auto-authenticates your active connection.' },
+    { id: 'intel_drop',     price: 150, name: 'Intel Drop',     desc: 'Anonymous tip reveals all files on the current target.' },
+  ],
+};
+
 const MISSIONS = [
   {
     id: 'a1m1',
