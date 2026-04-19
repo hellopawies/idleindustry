@@ -4,11 +4,13 @@ const G = {
   tools:           ['basic_cracker'],
   crypto:          0,
   notoriety:       0,
+  freeMode:        false,
 
-  // Session-only
+  // Session-only (not saved)
   connected:       null,
   trace:           0,
   downloadedFiles: [],
+  currentQuest:    null,
 };
 
 async function init() {
@@ -17,8 +19,8 @@ async function init() {
   if (!session?.userId) { window.location.href = '../'; return; }
 
   const username = session.username || 'ghost';
-  document.getElementById('hud-user').textContent   = username;
-  document.getElementById('prompt').textContent     = `${username}@terminal:~$`;
+  document.getElementById('hud-user').textContent = username;
+  document.getElementById('prompt').textContent   = `${username}@terminal:~$`;
 
   const saved = await loadCloud();
   if (saved) applyPayload(saved);
@@ -40,10 +42,18 @@ function applyPayload(saved) {
   G.tools        = saved.tools        ?? ['basic_cracker'];
   G.crypto       = saved.crypto       ?? 0;
   G.notoriety    = saved.notoriety    ?? 0;
+  G.freeMode     = saved.freeMode     ?? (G.missionIdx >= MISSIONS.length);
 }
 
 function saveState() {
-  saveCloud({ missionIdx: G.missionIdx, missionsDone: G.missionsDone, tools: G.tools, crypto: G.crypto, notoriety: G.notoriety });
+  saveCloud({
+    missionIdx:   G.missionIdx,
+    missionsDone: G.missionsDone,
+    tools:        G.tools,
+    crypto:       G.crypto,
+    notoriety:    G.notoriety,
+    freeMode:     G.freeMode,
+  });
 }
 
 // ── Intro ─────────────────────────────────────────────────────
@@ -69,30 +79,50 @@ function showIntro(username) {
   }, { once: true });
 }
 
-// ── Mission ───────────────────────────────────────────────────
+// ── Mission / Free mode ───────────────────────────────────────
 
-function getCurrentMission() { return MISSIONS[G.missionIdx] ?? null; }
+function getCurrentMission() {
+  if (G.freeMode) return G.currentQuest;
+  return MISSIONS[G.missionIdx] ?? null;
+}
 
 async function startMission() {
-  const mission = getCurrentMission();
+  G.connected = null; G.trace = 0; G.downloadedFiles = [];
+  updateHUD(); updateSidebar();
 
-  G.connected       = null;
-  G.trace           = 0;
-  G.downloadedFiles = [];
-  updateHUD();
-  updateSidebar();
-
-  if (!mission) {
-    await printLines([
-      { type: 'sys',  text: '[ END OF CURRENT CONTENT ]' },
-      { type: 'info', text: '' },
-      { type: 'info', text: 'You\'ve completed all available missions.' },
-      { type: 'dim',  text: 'More chapters coming soon...' },
-    ]);
+  if (G.freeMode || G.missionIdx >= MISSIONS.length) {
+    await enterFreeMode();
     return;
   }
 
-  await printLines(mission.briefing, 60);
+  await printLines(MISSIONS[G.missionIdx].briefing, 60);
+  printEmpty();
+}
+
+async function enterFreeMode() {
+  G.freeMode = true;
+  G.currentQuest = null;
+  saveState(); updateHUD(); updateSidebar();
+
+  await printLines([
+    { type: 'sys',  text: '[ STORY MODE COMPLETE ]' },
+    { type: 'info', text: '' },
+    { type: 'info', text: 'You\'ve finished all available story chapters.' },
+    { type: 'info', text: 'More chapters will drop — use "story" to check for updates.' },
+    { type: 'info', text: '' },
+    { type: 'info', text: 'In the meantime: anonymous contracts are available.' },
+    { type: 'dim',  text: 'Type "quest" to receive your first contract.' },
+  ], 55);
+  printEmpty();
+}
+
+async function generateNewQuest() {
+  G.currentQuest    = generateQuest(G.tools);
+  G.connected       = null;
+  G.trace           = 0;
+  G.downloadedFiles = [];
+  updateHUD(); updateSidebar();
+  await printLines(G.currentQuest.briefing, 50);
   printEmpty();
 }
 
@@ -110,6 +140,9 @@ async function handleCommand(raw) {
       case 'whoami':     await cmdWhoami();                  break;
       case 'status':     await cmdStatus();                  break;
       case 'clear':      clearOutput();                      break;
+      case 'quest':
+      case 'contracts':  await cmdQuest();                   break;
+      case 'story':      await cmdStory();                   break;
       case 'scan':       await cmdScan(args[0]);             break;
       case 'connect':    await cmdConnect(args[0], args[1]); break;
       case 'disconnect': await cmdDisconnect();              break;
@@ -131,13 +164,12 @@ async function handleCommand(raw) {
 }
 
 async function cmdHelp() {
-  const mission = getCurrentMission();
-  const showInject = G.tools.includes('sqli_kit') || mission?.id === 'a1m2';
+  const showInject = G.tools.includes('sqli_kit') || (!G.freeMode && getCurrentMission()?.id === 'a1m2');
   const lines = [
     { type: 'sys',  text: '[ AVAILABLE COMMANDS ]' },
     { type: 'info', text: '  help                — this message' },
     { type: 'info', text: '  whoami              — your profile' },
-    { type: 'info', text: '  status              — current mission & connection' },
+    { type: 'info', text: '  status              — current mission / contract' },
     { type: 'info', text: '  scan <ip>           — find open ports on a target' },
     { type: 'info', text: '  connect <ip> <port> — connect to a service' },
     { type: 'info', text: '  disconnect          — end current connection' },
@@ -151,6 +183,14 @@ async function cmdHelp() {
     { type: 'info', text: '  crypto              — crypto balance' },
     { type: 'info', text: '  clear               — clear terminal' },
   );
+  if (G.freeMode) {
+    lines.push(
+      { type: 'sys',  text: '' },
+      { type: 'sys',  text: '[ FREE MODE ]' },
+      { type: 'info', text: '  quest               — get / show current contract' },
+      { type: 'info', text: '  story               — check for new story chapters' },
+    );
+  }
   await printLines(lines, 18);
 }
 
@@ -159,38 +199,104 @@ async function cmdWhoami() {
   try { session = JSON.parse(localStorage.getItem('pg_session')); } catch {}
   await printLines([
     { type: 'ok',   text: `User:       ${session?.username || 'ghost'}` },
+    { type: 'info', text: `Mode:       ${G.freeMode ? 'Free Mode' : `Story — Act ${MISSIONS[G.missionIdx]?.act ?? '?'}`}` },
     { type: 'info', text: `Crypto:     ${G.crypto}` },
     { type: 'info', text: `Heat:       ${G.notoriety}%` },
     { type: 'info', text: `Tools:      ${G.tools.join(', ')}` },
-    { type: 'info', text: `Completed:  ${G.missionsDone.length} mission(s)` },
+    { type: 'info', text: `Story:      ${G.missionsDone.length} / ${MISSIONS.length} chapters` },
   ], 20);
 }
 
 async function cmdStatus() {
   const mission = getCurrentMission();
   const conn    = G.connected;
-  await printLines([
-    { type: 'sys',  text: mission ? `[ ACT ${mission.act} — ${mission.title.toUpperCase()} ]` : '[ NO ACTIVE MISSION ]' },
-    { type: 'info', text: `Objective:  ${mission?.objective ?? '—'}` },
+  const lines   = [];
+
+  if (G.freeMode) {
+    if (mission) {
+      lines.push(
+        { type: 'sys',  text: '[ ACTIVE CONTRACT ]' },
+        { type: 'info', text: `Target:     ${mission.company}  (${mission.target.ip})` },
+        { type: 'info', text: `Objective:  ${mission.objective}` },
+        { type: 'info', text: `Payout:     ${mission.reward.crypto} CRYPTO` },
+      );
+    } else {
+      lines.push(
+        { type: 'sys',  text: '[ FREE MODE — NO ACTIVE CONTRACT ]' },
+        { type: 'dim',  text: 'Type "quest" to get a contract.' },
+      );
+    }
+  } else {
+    lines.push(
+      { type: 'sys',  text: mission ? `[ ACT ${mission.act} — ${mission.title.toUpperCase()} ]` : '[ NO ACTIVE MISSION ]' },
+      { type: 'info', text: `Objective:  ${mission?.objective ?? '—'}` },
+    );
+  }
+
+  lines.push(
     { type: conn ? 'ok' : 'dim', text: `Connection: ${conn ? `${conn.ip}:${conn.port} (${conn.service})${conn.authed ? ' ✓' : ' — not authenticated'}` : 'Offline'}` },
     { type: G.trace > 60 ? 'warn' : 'info', text: `Trace:      ${Math.round(G.trace)}%` },
-  ], 20);
+  );
+  await printLines(lines, 20);
+}
+
+async function cmdQuest() {
+  if (!G.freeMode) { printLine('[!] Contracts are only available in Free Mode.', 'out-err'); return; }
+
+  // Active quest not yet completed — show it
+  if (G.currentQuest && !G.downloadedFiles.includes(G.currentQuest._file)) {
+    await printLines([
+      { type: 'sys',  text: '[ ACTIVE CONTRACT ]' },
+      { type: 'info', text: `Target:    ${G.currentQuest.company}` },
+      { type: 'warn', text: `IP:        ${G.currentQuest.target.ip}` },
+      { type: 'info', text: `Objective: ${G.currentQuest.objective}` },
+      { type: 'info', text: `Payout:    ${G.currentQuest.reward.crypto} CRYPTO` },
+    ], 20);
+    return;
+  }
+
+  printLine('[*] Fetching new contract...', 'out-dim');
+  await delay(700);
+  await generateNewQuest();
+}
+
+async function cmdStory() {
+  if (!G.freeMode) { printLine('[*] You are already in story mode.', 'out-dim'); return; }
+
+  if (G.missionIdx < MISSIONS.length) {
+    // New chapters are available
+    printLine('[+] New story chapter detected! Switching to story mode...', 'out-ok');
+    await delay(600);
+    G.freeMode = false;
+    G.currentQuest = null;
+    clearOutput();
+    await startMission();
+  } else {
+    await printLines([
+      { type: 'sys',  text: '[ STORY STATUS ]' },
+      { type: 'info', text: `Chapters completed: ${G.missionsDone.length} / ${MISSIONS.length}` },
+      { type: 'dim',  text: 'No new chapters yet. Check back soon.' },
+    ], 20);
+  }
+}
+
+// ── Target resolution (story mission or free quest) ───────────
+
+function getActiveTarget() {
+  return getCurrentMission()?.target ?? null;
 }
 
 async function cmdScan(ip) {
   if (!ip) { printLine('Usage: scan <ip>', 'out-err'); return; }
-  const mission = getCurrentMission();
-  if (!mission?.target) { printLine('[!] No target in scope.', 'out-err'); return; }
-  if (ip !== mission.target.ip) {
-    addTrace(10);
-    printLine(`[!] ${ip}: Host unreachable or not in scope.`, 'out-err');
-    return;
-  }
+  const target = getActiveTarget();
+  if (!target) { printLine('[!] No target in scope. ' + (G.freeMode ? 'Type "quest" to get a contract.' : ''), 'out-err'); return; }
+  if (ip !== target.ip) { addTrace(10); printLine(`[!] ${ip}: Host unreachable or not in scope.`, 'out-err'); return; }
+
   printLine(`[*] Scanning ${ip}...`, 'out-info');
   await printProgress('[*] Port scan', 1200);
-  printLine(`[+] Host: ${mission.target.hostname} (${ip})`, 'out-ok');
+  printLine(`[+] Host: ${target.hostname} (${ip})`, 'out-ok');
   printEmpty();
-  for (const [port, info] of Object.entries(mission.target.ports)) {
+  for (const [port, info] of Object.entries(target.ports)) {
     await delay(80);
     printLine(`    ${String(port).padEnd(6)} [OPEN]  ${info.service.padEnd(6)}  ${info.banner}`, 'out-info');
   }
@@ -198,12 +304,12 @@ async function cmdScan(ip) {
 
 async function cmdConnect(ip, portStr) {
   if (!ip || !portStr) { printLine('Usage: connect <ip> <port>', 'out-err'); return; }
-  const mission = getCurrentMission();
-  if (!mission?.target) { printLine('[!] No target in scope.', 'out-err'); return; }
-  if (ip !== mission.target.ip) { addTrace(5); printLine(`[!] ${ip}: Host unreachable.`, 'out-err'); return; }
+  const target = getActiveTarget();
+  if (!target) { printLine('[!] No target in scope.', 'out-err'); return; }
+  if (ip !== target.ip) { addTrace(5); printLine(`[!] ${ip}: Host unreachable.`, 'out-err'); return; }
 
   const port     = parseInt(portStr);
-  const portInfo = mission.target.ports[port];
+  const portInfo = target.ports[port];
   if (!portInfo) { addTrace(5); printLine(`[!] Port ${port} is closed or filtered.`, 'out-err'); return; }
 
   if (G.connected) await cmdDisconnect(true);
@@ -212,7 +318,7 @@ async function cmdConnect(ip, portStr) {
 
   printLine(`[+] Connected to ${ip}:${port} (${portInfo.service})`, 'out-ok');
   printLine(`    ${portInfo.banner}`, 'out-dim');
-  if (portInfo.service === 'SSH')                                     printLine('[*] Authentication required — use "crack"', 'out-info');
+  if (portInfo.service === 'SSH')                                       printLine('[*] Authentication required — use "crack"', 'out-info');
   else if (portInfo.service === 'HTTP' || portInfo.service === 'HTTPS') printLine('[*] Web service — use "inject" to probe login form', 'out-info');
 }
 
@@ -226,13 +332,11 @@ async function cmdDisconnect(silent = false) {
 }
 
 async function cmdCrack() {
-  if (!G.connected)                                             { printLine('Not connected to any host.', 'out-err'); return; }
-  if (G.connected.service !== 'SSH')                           { printLine('[!] crack only works on SSH services.', 'out-err'); return; }
-  if (G.connected.authed)                                      { printLine('[*] Already authenticated.', 'out-dim'); return; }
+  if (!G.connected)                        { printLine('Not connected to any host.', 'out-err'); return; }
+  if (G.connected.service !== 'SSH')       { printLine('[!] crack only works on SSH services.', 'out-err'); return; }
+  if (G.connected.authed)                  { printLine('[*] Already authenticated.', 'out-dim'); return; }
 
-  const mission  = getCurrentMission();
-  const portInfo = mission?.target?.ports[G.connected.port];
-
+  const portInfo = getActiveTarget()?.ports[G.connected.port];
   if (!portInfo?.crackable) { addTrace(15); printLine('[!] This service has hardened auth — tool insufficient.', 'out-err'); return; }
   if (portInfo.complexity === 'medium' && !G.tools.includes('wordlist_pro')) {
     addTrace(10); printLine('[!] Password complexity too high for Basic Cracker. Upgrade your tools.', 'out-err'); return;
@@ -248,12 +352,11 @@ async function cmdCrack() {
 }
 
 async function cmdInject() {
-  if (!G.connected)                                                      { printLine('Not connected to any host.', 'out-err'); return; }
-  if (G.connected.service !== 'HTTP' && G.connected.service !== 'HTTPS') { printLine('[!] inject only works on HTTP/HTTPS services.', 'out-err'); return; }
-  if (G.connected.authed)                                                { printLine('[*] Already have database access.', 'out-dim'); return; }
+  if (!G.connected)                                                        { printLine('Not connected to any host.', 'out-err'); return; }
+  if (G.connected.service !== 'HTTP' && G.connected.service !== 'HTTPS')  { printLine('[!] inject only works on HTTP/HTTPS services.', 'out-err'); return; }
+  if (G.connected.authed)                                                  { printLine('[*] Already have database access.', 'out-dim'); return; }
 
-  const mission  = getCurrentMission();
-  const portInfo = mission?.target?.ports[G.connected.port];
+  const portInfo = getActiveTarget()?.ports[G.connected.port];
   if (!portInfo?.injectable) { addTrace(10); printLine('[!] No injectable endpoint detected on this service.', 'out-err'); return; }
 
   printLine("[*] Probing login form for SQL injection...", 'out-info');
@@ -269,7 +372,7 @@ async function cmdInject() {
 
 async function cmdLs() {
   if (!G.connected?.authed) { printLine('[!] Not authenticated. Connect and authenticate first.', 'out-err'); return; }
-  const files = getCurrentMission()?.target?.files;
+  const files = getActiveTarget()?.files;
   if (!files || Object.keys(files).length === 0) { printLine('No files.', 'out-dim'); return; }
   printLine('[*] Directory listing:', 'out-info');
   for (const [name, content] of Object.entries(files)) {
@@ -281,7 +384,7 @@ async function cmdLs() {
 async function cmdCat(filename) {
   if (!filename) { printLine('Usage: cat <file>', 'out-err'); return; }
   if (!G.connected?.authed) { printLine('[!] Not authenticated.', 'out-err'); return; }
-  const content = getCurrentMission()?.target?.files?.[filename];
+  const content = getActiveTarget()?.files?.[filename];
   if (content === undefined) { addTrace(2); printLine(`[!] File not found: ${filename}`, 'out-err'); return; }
   printLine(`[*] ${filename}:`, 'out-dim');
   printEmpty();
@@ -291,7 +394,7 @@ async function cmdCat(filename) {
 async function cmdDownload(filename) {
   if (!filename) { printLine('Usage: download <file>', 'out-err'); return; }
   if (!G.connected?.authed) { printLine('[!] Not authenticated.', 'out-err'); return; }
-  const content = getCurrentMission()?.target?.files?.[filename];
+  const content = getActiveTarget()?.files?.[filename];
   if (content === undefined) { addTrace(3); printLine(`[!] File not found: ${filename}`, 'out-err'); return; }
   printLine(`[*] Downloading ${filename}...`, 'out-info');
   await printProgress('[*] Transfer', 800);
@@ -300,11 +403,16 @@ async function cmdDownload(filename) {
   printLine(`[+] Downloaded: ${filename}`, 'out-ok');
 }
 
-// ── Mission completion ────────────────────────────────────────
+// ── Completion ────────────────────────────────────────────────
 
 function checkMissionComplete() {
   const mission = getCurrentMission();
-  if (mission?.check(G)) completeMission(mission);
+  if (!mission) return;
+  if (G.freeMode) {
+    if (G.currentQuest?.check(G)) completeQuest(G.currentQuest);
+  } else {
+    if (mission.check(G)) completeMission(mission);
+  }
 }
 
 async function completeMission(mission) {
@@ -320,10 +428,9 @@ async function completeMission(mission) {
   saveState();
 
   document.getElementById('mc-mission-name').textContent = mission.title;
-  document.getElementById('mc-reward').textContent = mission.reward.crypto > 0 ? `+${mission.reward.crypto} CRYPTO` : '';
-  if (mission.unlocks.length) {
-    document.getElementById('mc-reward').textContent += (mission.reward.crypto > 0 ? '  |  ' : '') + `Unlocked: ${mission.unlocks.map(t => TOOLS[t]?.name ?? t).join(', ')}`;
-  }
+  let rewardText = mission.reward.crypto > 0 ? `+${mission.reward.crypto} CRYPTO` : '';
+  if (mission.unlocks.length) rewardText += (rewardText ? '  |  ' : '') + `Unlocked: ${mission.unlocks.map(t => TOOLS[t]?.name ?? t).join(', ')}`;
+  document.getElementById('mc-reward').textContent = rewardText;
   document.getElementById('mission-complete').hidden = false;
 
   document.getElementById('mc-next-btn').onclick = () => {
@@ -333,6 +440,22 @@ async function completeMission(mission) {
     startMission();
     setBusy(false);
   };
+}
+
+async function completeQuest(quest) {
+  setBusy(true);
+  G.crypto += quest.reward.crypto;
+  G.currentQuest = null;
+  saveState();
+  await delay(400);
+  await printLines([
+    { type: 'ok',  text: '' },
+    { type: 'ok',  text: `[+] CONTRACT COMPLETE — ${quest.title}` },
+    { type: 'ok',  text: `[+] Payout deposited: +${quest.reward.crypto} CRYPTO` },
+    { type: 'dim', text: 'Type "quest" for a new contract.' },
+  ], 60);
+  updateHUD(); updateSidebar();
+  setBusy(false);
 }
 
 // ── Trace ─────────────────────────────────────────────────────
@@ -356,18 +479,21 @@ async function triggerTraceBurn() {
   saveState(); updateHUD(); updateSidebar();
   await delay(1000);
   printLine('[*] Connection dropped. Retry your approach.', 'out-warn');
+  if (G.freeMode) printLine('[*] Type "quest" to see your current contract.', 'out-dim');
   setBusy(false);
 }
 
 // ── HUD & Sidebar ─────────────────────────────────────────────
 
 function updateHUD() {
-  const mission = getCurrentMission();
   const levelEl = document.getElementById('hdr-level');
-  if (mission) {
-    levelEl.textContent = `Act ${mission.act} · Mission ${G.missionIdx + 1} / ${MISSIONS.length}`;
+  if (G.freeMode) {
+    levelEl.textContent = 'Free Mode';
   } else {
-    levelEl.textContent = 'All missions complete';
+    const m = MISSIONS[G.missionIdx];
+    levelEl.textContent = m
+      ? `Act ${m.act} · Mission ${G.missionIdx + 1} / ${MISSIONS.length}`
+      : 'Free Mode';
   }
 
   const tf = document.getElementById('trace-fill');
@@ -380,13 +506,23 @@ function updateHUD() {
 }
 
 function updateSidebar() {
-  const mission = getCurrentMission();
+  const quest   = G.freeMode ? G.currentQuest : null;
+  const mission = G.freeMode ? null : MISSIONS[G.missionIdx];
   const conn    = G.connected;
-  document.getElementById('sb-mission-title').textContent = mission?.title ?? '—';
-  document.getElementById('sb-objective').textContent     = mission?.objective ?? '—';
-  document.getElementById('sb-crypto').textContent        = G.crypto;
-  document.getElementById('sb-notoriety').textContent     = G.notoriety;
-  document.getElementById('sb-connection').textContent    =
+
+  document.getElementById('sb-mission-title').textContent =
+    G.freeMode
+      ? (quest ? quest.title : 'Free Mode')
+      : (mission?.title ?? '—');
+
+  document.getElementById('sb-objective').textContent =
+    G.freeMode
+      ? (quest ? quest.objective : 'Type "quest" to start')
+      : (mission?.objective ?? '—');
+
+  document.getElementById('sb-crypto').textContent     = G.crypto;
+  document.getElementById('sb-notoriety').textContent  = G.notoriety;
+  document.getElementById('sb-connection').textContent =
     conn ? `${conn.ip}:${conn.port} (${conn.authed ? '✓ authed' : 'no auth'})` : 'Offline';
   document.getElementById('sb-tools').innerHTML =
     G.tools.map(t => `<span class="tool-chip">${TOOLS[t]?.name ?? t}</span>`).join('');
