@@ -23,34 +23,45 @@ html, body {
   overflow: hidden;
 }
 
-/* ── HUD ── */
-#hud {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  font-size: 12px;
-  flex-shrink: 0;
-  user-select: none;
+/* ── Header (matches hub/drone/idle-industry style) ── */
+header {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 20px;
+  background: #1a1a24;
+  border-bottom: 1px solid #2a2a3e;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  flex-shrink: 0; user-select: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #e8e8f0;
 }
-.hud-left  { display: flex; align-items: center; gap: 16px; }
-.hud-right { display: flex; align-items: center; gap: 16px; }
-.hud-logo   { color: var(--green); font-weight: bold; letter-spacing: 3px; }
-.hud-back   { color: var(--muted); text-decoration: none; font-size: 11px; transition: color .15s; }
-.hud-back:hover { color: var(--text); }
-.hud-user   { color: var(--muted); }
-.hud-mission { color: var(--text); }
+.hdr-back { color: #888899; text-decoration: none; font-size: .8rem; font-weight: 600; transition: color .15s; white-space: nowrap; }
+.hdr-back:hover { color: #e8e8f0; }
+header h1 { font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
+header h1 span { color: #6c63ff; }
+.hdr-level {
+  font-size: .72rem; font-weight: 700; letter-spacing: .05em;
+  color: #888899; background: #22223a; border: 1px solid #2a2a3e;
+  border-radius: 6px; padding: 3px 10px; white-space: nowrap;
+}
+.hdr-right { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+.hdr-user  { font-size: .85rem; color: #857df8; font-weight: 600; white-space: nowrap; }
 
-.hud-meter { display: flex; align-items: center; gap: 6px; font-size: 11px; }
-.hud-meter-label { color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-.meter-bar  { width: 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.hud-meter { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: 'Segoe UI', system-ui, sans-serif; }
+.hud-meter-label { color: #888899; text-transform: uppercase; letter-spacing: 1px; }
+.hud-meter-pct   { color: #e8e8f0; min-width: 28px; font-size: 11px; }
+.meter-bar  { width: 72px; height: 5px; background: #22223a; border-radius: 3px; overflow: hidden; }
 .meter-fill { height: 100%; border-radius: 3px; transition: width .3s; }
-.meter-fill.trace      { background: var(--amber); }
-.meter-fill.trace.high { background: var(--red); }
-.meter-fill.notoriety  { background: var(--red); }
+.meter-fill.trace      { background: #ffaa00; }
+.meter-fill.trace.high { background: #ff4444; }
+.meter-fill.notoriety  { background: #e05070; }
+
+@media (max-width: 640px) {
+  .hdr-level { display: none; }
+  .hud-meter-label { display: none; }
+}
 
 /* ── Layout ── */
-#layout { display: flex; height: calc(100vh - 34px); }
+#layout { display: flex; height: calc(100vh - 45px); }
 
 /* ── Terminal ── */
 #terminal {

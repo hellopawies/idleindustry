@@ -363,7 +363,12 @@ async function triggerTraceBurn() {
 
 function updateHUD() {
   const mission = getCurrentMission();
-  document.getElementById('hud-mission').textContent = mission ? `[${mission.title}]` : '';
+  const levelEl = document.getElementById('hdr-level');
+  if (mission) {
+    levelEl.textContent = `Act ${mission.act} · Mission ${G.missionIdx + 1} / ${MISSIONS.length}`;
+  } else {
+    levelEl.textContent = 'All missions complete';
+  }
 
   const tf = document.getElementById('trace-fill');
   tf.style.width  = G.trace + '%';
