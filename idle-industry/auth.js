@@ -12,7 +12,6 @@ async function onLogin(userId, username) {
   const cached = readCache();
   if (cached) { applyPayload(cached); render(); }
   showGame(username);
-  if (!tickInterval) tickInterval = setInterval(tick, 1000);
 
   if (configRefreshInterval) clearInterval(configRefreshInterval);
   configRefreshInterval = setInterval(async () => {
@@ -20,8 +19,14 @@ async function onLogin(userId, username) {
     updateEventBanner();
   }, 5 * 60 * 1000);
 
-  const cloudSave = await loadCloud();
-  if (cloudSave) {
+  const result = await loadCloud();
+
+  if (result.networkError) {
+    // Network failure — keep cache, don't touch cloud
+    applyIdleProgress();
+  } else if (result.data) {
+    // Cloud save found — server wins on conflict
+    const cloudSave = result.data;
     if (!cached || cloudSave.last_save >= (cached.lastSave ?? 0)) {
       applyPayload({ money: cloudSave.money, owned: cloudSave.owned, lastSave: cloudSave.last_save });
     }
@@ -30,9 +35,16 @@ async function onLogin(userId, username) {
     writeCache();
     render();
   } else {
-    applyIdleProgress();
+    // No save in DB (new player or intentional reset) — start fresh, clear cache
+    clearCache();
+    applyPayload({ money: STARTING_MONEY, owned: new Array(INDUSTRIES.length).fill(0), lastSave: now() });
+    render();
     await saveCloud();
+    writeCache();
   }
+
+  // Start tick only after cloud state is resolved
+  if (!tickInterval) tickInterval = setInterval(tick, 1000);
 }
 
 // ── Admin login ───────────────────────────────────────────────
