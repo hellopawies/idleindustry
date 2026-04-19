@@ -521,6 +521,17 @@ table.users-tbl .time-cell  { color: var(--muted); font-size: 0.8rem; }
 .lb-table .lb-money { color: var(--yellow); font-weight: 700; text-align: right; }
 .lb-empty { text-align: center; color: var(--muted); padding: 36px; font-size: 0.88rem; }
 
+/* Offline receipt */
+#offline-receipt-modal .modal-box { width: 400px; max-height: 80vh; overflow-y: auto; }
+.receipt-row { display: flex; align-items: center; gap: .6rem; padding: .45rem 0; border-bottom: 1px solid rgba(42,42,62,.5); font-size: .85rem; }
+.receipt-row:last-child { border-bottom: none; }
+.receipt-icon { font-size: 1.1rem; flex-shrink: 0; width: 1.4rem; text-align: center; }
+.receipt-name { flex: 1; }
+.receipt-owned { font-size: .72rem; color: var(--muted); }
+.receipt-earned { font-weight: 700; color: var(--yellow); font-variant-numeric: tabular-nums; }
+.receipt-total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 10px; border-top: 1px solid #2a2a3e; font-weight: 700; font-size: .95rem; }
+.receipt-total-val { color: var(--green); font-size: 1.05rem; }
+
 /* Changelog */
 #changelog-modal .modal-box { width: 440px; max-height: 80vh; overflow-y: auto; }
 .cl-entry { margin-bottom: 20px; }

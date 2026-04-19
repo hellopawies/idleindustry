@@ -4,6 +4,9 @@
 
 ## 2026-04-19
 
+### Idle Industry — v1.0.0
+- Offline Earnings Receipt: returning players see a per-industry breakdown of what they earned while away
+
 ### Idle Industry — v0.9.0
 - Removed the Reset Game button
 

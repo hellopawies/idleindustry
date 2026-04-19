@@ -169,6 +169,14 @@ function selectEmoji(emoji) {
   closeEmojiPicker();
 }
 
+// ── Offline receipt ───────────────────────────────────────────
+document.getElementById("receipt-collect-btn").addEventListener("click", () => {
+  document.getElementById("offline-receipt-modal").classList.remove("visible");
+});
+document.getElementById("offline-receipt-modal").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove("visible");
+});
+
 // ── Leaderboard ───────────────────────────────────────────────
 async function loadLeaderboard() {
   const content = document.getElementById("leaderboard-content");

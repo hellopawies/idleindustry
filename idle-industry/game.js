@@ -217,16 +217,39 @@ function saveGame() { writeCache(); saveCloud(); }
 function applyIdleProgress(silent = false) {
   const elapsed = Math.min((now() - state.lastSave) / 1000, getRankOfflineCap());
   if (elapsed < 2 || totalIncome() === 0) return;
-  const earned = totalIncome() * elapsed * IDLE_MULTIPLIER;
-  state.money += earned;
-  state.lastSave = now();
-  if (!silent && elapsed >= 10) {
-    const toast = document.getElementById("offline-toast");
-    toast.style.display = "flex";
-    toast.innerHTML = `<p>While you were away for <strong>${fmtTime(elapsed)}</strong> you earned <strong>${fmt(earned)}</strong>.</p>
-      <button onclick="this.parentElement.style.display='none'">✕</button>`;
-    setTimeout(() => { toast.style.display = "none"; }, 7000);
-  }
+
+  const rankMult  = getRankMultiplier();
+  const eventMult = 1 + getEventBonus();
+
+  const breakdown = INDUSTRIES.map((ind, i) => {
+    if (state.owned[i] === 0) return null;
+    const earned = getIncome(i) * rankMult * eventMult * IDLE_MULTIPLIER * elapsed;
+    return { name: ind.name, emoji: ind.emoji, owned: state.owned[i], earned };
+  }).filter(Boolean);
+
+  const total = breakdown.reduce((s, r) => s + r.earned, 0);
+  state.money   += total;
+  state.lastSave  = now();
+
+  if (!silent && elapsed >= 10) showOfflineReceipt(breakdown, total, elapsed);
+}
+
+function showOfflineReceipt(breakdown, total, elapsed) {
+  document.getElementById("receipt-away-time").textContent = `Away for ${fmtTime(elapsed)}`;
+  document.getElementById("receipt-rows").innerHTML = breakdown.map(r => `
+    <div class="receipt-row">
+      <span class="receipt-icon">${r.emoji}</span>
+      <span class="receipt-name">${escHtml(r.name)} <span class="receipt-owned">×${r.owned}</span></span>
+      <span class="receipt-earned">${fmt(r.earned)}</span>
+    </div>
+  `).join("");
+  document.getElementById("receipt-total").innerHTML = `
+    <div class="receipt-total-row">
+      <span>Total earned</span>
+      <span class="receipt-total-val">${fmt(total)}</span>
+    </div>
+  `;
+  document.getElementById("offline-receipt-modal").classList.add("visible");
 }
 
 // ── Buy ───────────────────────────────────────────────────────
