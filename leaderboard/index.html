@@ -27,21 +27,23 @@
   .hdr-back { color: var(--muted); text-decoration: none; font-size: .8rem; font-weight: 600; transition: color .15s; white-space: nowrap; }
   .hdr-back:hover { color: var(--text); }
 
-  main { max-width: 640px; width: 100%; margin: 2rem auto; padding: 0 1.5rem; }
+  main { max-width: 680px; width: 100%; margin: 2rem auto; padding: 0 1.5rem; }
 
   .lb-header {
-    display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
   }
-  .lb-title { font-size: 1.2rem; font-weight: 800; }
-  .lb-game-label { font-size: .75rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .lb-title { font-size: 1.25rem; font-weight: 800; }
 
   .lb-tabs { display: flex; gap: .5rem; margin-bottom: 1.25rem; }
   .lb-tab {
     background: var(--surface); border: 1px solid var(--surface2); color: var(--muted);
-    border-radius: 8px; padding: 6px 16px; font-size: .8rem; font-weight: 600; cursor: pointer;
-    transition: border-color .15s, color .15s;
+    border-radius: 8px; padding: 7px 18px; font-size: .82rem; font-weight: 600; cursor: pointer;
+    transition: border-color .15s, color .15s; white-space: nowrap;
   }
-  .lb-tab.active { border-color: var(--accent); color: var(--accent); }
+  .lb-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,.08); }
+
+  .lb-panel { display: none; }
+  .lb-panel.active { display: block; }
 
   .lb-box { background: var(--surface); border: 1px solid var(--surface2); border-radius: 14px; overflow: hidden; }
 
@@ -58,6 +60,7 @@
 
   .lb-pos { color: var(--muted); font-size: .82rem; width: 36px; text-align: center; }
   .lb-money { color: var(--yellow); font-weight: 700; text-align: right; }
+  .lb-num   { color: var(--green);  font-weight: 700; text-align: right; }
 
   .lb-you-tag {
     font-size: .65rem; font-weight: 700; color: var(--accent-hover);
@@ -77,6 +80,19 @@
   }
   .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
   .btn-refresh:disabled { opacity: .4; cursor: not-allowed; }
+
+  .farm-badge {
+    display: inline-block; font-size: .72rem; font-weight: 700;
+    background: rgba(76,175,138,.15); color: var(--green);
+    border: 1px solid rgba(76,175,138,.3); border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .research-bar {
+    display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums;
+  }
+  .research-pips { display: inline-flex; gap: 2px; }
+  .pip { width: 7px; height: 7px; border-radius: 2px; background: var(--surface2); }
+  .pip.filled { background: var(--accent); }
 </style>
 </head>
 <body>
@@ -86,28 +102,57 @@
 </header>
 <main>
   <div class="lb-header">
-    <div>
-      <div class="lb-title">🏆 Top Players</div>
-      <div class="lb-game-label">Idle Industry</div>
-    </div>
+    <div class="lb-title">🏆 Top Players</div>
     <button class="btn-refresh" id="btn-refresh">↻ Refresh</button>
   </div>
-  <div class="lb-box">
-    <table class="lb-table">
-      <thead>
-        <tr>
-          <th class="lb-pos">#</th>
-          <th>Player</th>
-          <th>Rank</th>
-          <th class="lb-money">Net Worth</th>
-        </tr>
-      </thead>
-      <tbody id="lb-body">
-        <tr><td colspan="4" class="lb-empty">Loading…</td></tr>
-      </tbody>
-    </table>
-    <div id="lb-not-ranked" style="display:none" class="lb-not-ranked">
-      You are not in the top 20 yet — keep earning!
+
+  <div class="lb-tabs">
+    <button class="lb-tab active" data-tab="idi">💰 Idle Industry</button>
+    <button class="lb-tab"       data-tab="drone">🚁 The Drone</button>
+  </div>
+
+  <!-- Idle Industry panel -->
+  <div class="lb-panel active" id="panel-idi">
+    <div class="lb-box">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th class="lb-pos">#</th>
+            <th>Player</th>
+            <th>Rank</th>
+            <th class="lb-money">Net Worth</th>
+          </tr>
+        </thead>
+        <tbody id="lb-body-idi">
+          <tr><td colspan="4" class="lb-empty">Loading…</td></tr>
+        </tbody>
+      </table>
+      <div id="lb-not-ranked-idi" style="display:none" class="lb-not-ranked">
+        You are not in the top 20 yet — keep earning!
+      </div>
+    </div>
+  </div>
+
+  <!-- Drone panel -->
+  <div class="lb-panel" id="panel-drone">
+    <div class="lb-box">
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th class="lb-pos">#</th>
+            <th>Player</th>
+            <th>Farm</th>
+            <th>Research</th>
+            <th class="lb-num">Resources</th>
+          </tr>
+        </thead>
+        <tbody id="lb-body-drone">
+          <tr><td colspan="5" class="lb-empty">Loading…</td></tr>
+        </tbody>
+      </table>
+      <div id="lb-not-ranked-drone" style="display:none" class="lb-not-ranked">
+        Complete the story mode to appear on the drone leaderboard!
+      </div>
     </div>
   </div>
 </main>
@@ -116,7 +161,7 @@ const SUPABASE_URL      = "https://fwawlsbjltgvcpyezciw.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_cWfZRmHb55YMA-wa7hb6rw_qP6dIuYi";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const RANKS = [
+const IDI_RANKS = [
   { name: "Intern",    emoji: "🪪" },
   { name: "Associate", emoji: "💼" },
   { name: "Manager",   emoji: "📊" },
@@ -126,6 +171,7 @@ const RANKS = [
 ];
 
 const MEDALS = ["🥇", "🥈", "🥉"];
+const MAX_RESEARCH = 8;
 
 function escHtml(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -139,23 +185,29 @@ function fmt(n) {
   return "$" + Math.floor(n);
 }
 
+function fmtRes(hay, wood, carrot) {
+  const parts = [];
+  if (hay    > 0) parts.push(`🌾 ${hay}`);
+  if (wood   > 0) parts.push(`🪵 ${wood}`);
+  if (carrot > 0) parts.push(`🥕 ${carrot}`);
+  return parts.length ? parts.join(" ") : "—";
+}
+
 let myName = null;
 try {
   const s = JSON.parse(localStorage.getItem("pg_session"));
   myName = s?.username?.toLowerCase() || null;
 } catch {}
 
-async function loadLeaderboard() {
-  const btn  = document.getElementById("btn-refresh");
-  const body = document.getElementById("lb-body");
-  const notRanked = document.getElementById("lb-not-ranked");
-  btn.disabled = true;
-  body.innerHTML = '<tr><td colspan="4" class="lb-empty">Loading…</td></tr>';
+// ── Idle Industry leaderboard ─────────────────────────────────
+async function loadIdiLeaderboard() {
+  const body      = document.getElementById("lb-body-idi");
+  const notRanked = document.getElementById("lb-not-ranked-idi");
+  body.innerHTML  = '<tr><td colspan="4" class="lb-empty">Loading…</td></tr>';
   notRanked.style.display = "none";
 
   const { data, error } = await sb.rpc("get_leaderboard");
   const rows = Array.isArray(data) ? data : [];
-  btn.disabled = false;
 
   if (error || rows.length === 0) {
     body.innerHTML = '<tr><td colspan="4" class="lb-empty">No data yet — be the first on the board!</td></tr>';
@@ -164,7 +216,7 @@ async function loadLeaderboard() {
 
   const inTop = rows.some(r => r.username?.toLowerCase() === myName);
   body.innerHTML = rows.map((row, i) => {
-    const rank = RANKS[row.rank_id] || RANKS[0];
+    const rank = IDI_RANKS[row.rank_id] || IDI_RANKS[0];
     const pos  = MEDALS[i] ?? (i + 1);
     const isMe = row.username?.toLowerCase() === myName;
     return `<tr class="${isMe ? "lb-you" : ""}">
@@ -178,8 +230,73 @@ async function loadLeaderboard() {
   notRanked.style.display = (!inTop && myName) ? "" : "none";
 }
 
-document.getElementById("btn-refresh").addEventListener("click", loadLeaderboard);
-loadLeaderboard();
+// ── Drone leaderboard ─────────────────────────────────────────
+function researchPips(count) {
+  const pips = Array.from({ length: MAX_RESEARCH }, (_, i) =>
+    `<span class="pip ${i < count ? "filled" : ""}"></span>`
+  ).join("");
+  return `<span class="research-bar"><span class="research-pips">${pips}</span> ${count}/${MAX_RESEARCH}</span>`;
+}
+
+async function loadDroneLeaderboard() {
+  const body      = document.getElementById("lb-body-drone");
+  const notRanked = document.getElementById("lb-not-ranked-drone");
+  body.innerHTML  = '<tr><td colspan="5" class="lb-empty">Loading…</td></tr>';
+  notRanked.style.display = "none";
+
+  const { data, error } = await sb.rpc("get_drone_leaderboard");
+  const rows = Array.isArray(data) ? data : [];
+
+  if (error || rows.length === 0) {
+    body.innerHTML = '<tr><td colspan="5" class="lb-empty">No pilots have completed story mode yet — be the first!</td></tr>';
+    return;
+  }
+
+  const inTop = rows.some(r => r.username?.toLowerCase() === myName);
+  body.innerHTML = rows.map((row, i) => {
+    const pos  = MEDALS[i] ?? (i + 1);
+    const isMe = row.username?.toLowerCase() === myName;
+    return `<tr class="${isMe ? "lb-you" : ""}">
+      <td class="lb-pos">${pos}</td>
+      <td><strong>${escHtml(row.username)}</strong>${isMe ? '<span class="lb-you-tag">You</span>' : ""}</td>
+      <td><span class="farm-badge">${row.farm_size}×${row.farm_size}</span></td>
+      <td>${researchPips(row.research_count ?? 0)}</td>
+      <td class="lb-num">${fmtRes(row.hay, row.wood, row.carrot)}</td>
+    </tr>`;
+  }).join("");
+
+  notRanked.style.display = (!inTop && myName) ? "" : "none";
+}
+
+// ── Tab switching ─────────────────────────────────────────────
+let activeTab   = "idi";
+let idiLoaded   = false;
+let droneLoaded = false;
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll(".lb-tab").forEach(b =>
+    b.classList.toggle("active", b.dataset.tab === tab)
+  );
+  document.querySelectorAll(".lb-panel").forEach(p =>
+    p.classList.toggle("active", p.id === `panel-${tab}`)
+  );
+  if (tab === "idi"   && !idiLoaded)   { idiLoaded   = true; loadIdiLeaderboard();   }
+  if (tab === "drone" && !droneLoaded) { droneLoaded = true; loadDroneLeaderboard(); }
+}
+
+document.querySelectorAll(".lb-tab").forEach(btn =>
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab))
+);
+
+document.getElementById("btn-refresh").addEventListener("click", () => {
+  if (activeTab === "idi")   { idiLoaded   = false; loadIdiLeaderboard(); }
+  if (activeTab === "drone") { droneLoaded = false; loadDroneLeaderboard(); }
+});
+
+// Initial load
+idiLoaded = true;
+loadIdiLeaderboard();
 </script>
 </body>
 </html>
