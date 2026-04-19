@@ -10,6 +10,8 @@ const G = {
   persistedHosts:  [],
   rootedHosts:     [],
   pivotRoutes:     [],
+  osintDomains:    [],
+  relayedHosts:    [],
 
   // Session-only (not saved)
   connected:       null,
@@ -53,6 +55,8 @@ function applyPayload(saved) {
   G.persistedHosts  = saved.persistedHosts  ?? [];
   G.rootedHosts     = saved.rootedHosts     ?? [];
   G.pivotRoutes     = saved.pivotRoutes     ?? [];
+  G.osintDomains    = saved.osintDomains    ?? [];
+  G.relayedHosts    = saved.relayedHosts    ?? [];
   G.trace           = saved.trace           ?? 0;
   G.downloadedFiles = saved.downloadedFiles ?? [];
   if (saved.savedQuest) G.currentQuest = restoreQuest(saved.savedQuest);
@@ -88,6 +92,8 @@ async function saveState() {
     persistedHosts:   G.persistedHosts,
     rootedHosts:      G.rootedHosts,
     pivotRoutes:      G.pivotRoutes,
+    osintDomains:     G.osintDomains,
+    relayedHosts:     G.relayedHosts,
     trace:            G.trace,
     downloadedFiles:  G.downloadedFiles,
     savedQuest,
@@ -348,6 +354,8 @@ async function cmdWhoami() {
   if (G.persistedHosts.length)      lines.push({ type: 'info', text: `Backdoors:    ${G.persistedHosts.join(', ')}` });
   if (G.rootedHosts.length)         lines.push({ type: 'info', text: `Rooted:       ${G.rootedHosts.join(', ')}` });
   if (G.pivotRoutes.length)         lines.push({ type: 'info', text: `Pivot routes: ${G.pivotRoutes.join(', ')}` });
+  if (G.osintDomains.length)        lines.push({ type: 'info', text: `OSINT'd:      ${G.osintDomains.join(', ')}` });
+  if (G.relayedHosts.length)        lines.push({ type: 'info', text: `Relayed:      ${G.relayedHosts.join(', ')}` });
   await printLines(lines, 20);
 }
 
@@ -905,11 +913,14 @@ async function cmdHash(filename) {
   printLine('[*] Hashes detected: MD5-crypt / SHA-512-crypt', 'out-dim');
   await printProgress('[*] Cracking', hasJohn ? 1800 : 3000);
   addTrace(8);
+  const crackedLines = ['# Cracked password hashes', 'root      : T00r_Fl4g_2026!', 'admin     : Adm1n_V3r1d1an', 'sysadmin  : Sysadm1n#Backup'];
   printLine('[+] Cracked hashes:', 'out-ok');
-  await delay(200); printLine('    root      → T00r_Fl4g_2026!', 'out-ok');
-  await delay(200); printLine('    admin     → Adm1n_V3r1d1an', 'out-ok');
-  await delay(200); printLine('    sysadmin  → Sysadm1n#Backup', 'out-ok');
-  printLine('[*] Use cracked passwords with "crack" or "move <ip>" for lateral access.', 'out-dim');
+  for (const line of crackedLines.slice(1)) { await delay(200); printLine(`    ${line}`, 'out-ok'); }
+  const crackSave = 'cracked_passwords.txt';
+  if (G.connected?.authed) getActiveTarget().files[crackSave] = crackedLines.join('\n');
+  if (!G.downloadedFiles.includes(crackSave)) G.downloadedFiles.push(crackSave);
+  await saveState();
+  printLine('[*] Saved as cracked_passwords.txt. Use with "crack" or "move <ip>".', 'out-dim');
 }
 
 async function cmdPivot(ip) {
@@ -966,6 +977,17 @@ async function cmdOsint(domain) {
     await delay(150); printLine('    y.karim@veridian.corp : Karim_Sec#2024 (breach: RockYou2024)', 'out-warn');
   }
   addTrace(5);
+  if (!G.osintDomains.includes(domain)) G.osintDomains.push(domain);
+  // Mission-specific: if domain matches active target's osintDomain, auto-save output files
+  const mTarget = getActiveTarget();
+  if (mTarget?.osintDomain === domain && mTarget.osintFiles) {
+    for (const [fname, content] of Object.entries(mTarget.osintFiles)) {
+      mTarget.files[fname] = content;
+      if (!G.downloadedFiles.includes(fname)) G.downloadedFiles.push(fname);
+    }
+    printLine('[+] Intelligence report saved to downloads.', 'out-ok');
+  }
+  await saveState();
 }
 
 async function cmdShell(type) {
@@ -990,6 +1012,11 @@ async function cmdShell(type) {
     }
   }
   printLine('[*] Replace ATTACKER with your listener IP.', 'out-dim');
+  const shellSave = 'shell_payload.txt';
+  const allPayloads = Object.entries(shells).map(([t, c]) => `# ${t}\n${c}`).join('\n\n');
+  if (!G.downloadedFiles.includes(shellSave)) G.downloadedFiles.push(shellSave);
+  if (G.connected?.authed) getActiveTarget().files[shellSave] = allPayloads;
+  await saveState();
 }
 
 async function cmdIdor(id) {
@@ -1009,6 +1036,11 @@ async function cmdIdor(id) {
   if (record) {
     printLine(`[+] IDOR confirmed — server returned data for ID ${id}:`, 'out-ok');
     for (const line of record.split(',')) { await delay(60); printLine(`    ${line.trim()}`, 'out-info'); }
+    const saveName = `idor_${idorData.param}_${id}.txt`;
+    target.files[saveName] = record;
+    if (!G.downloadedFiles.includes(saveName)) G.downloadedFiles.push(saveName);
+    printLine(`[+] Record saved: ${saveName}`, 'out-dim');
+    await saveState();
   } else {
     printLine(`[*] HTTP 404 — record ID ${id} not found. Try IDs: 1, 2, 3, 99`, 'out-dim');
   }
@@ -1028,6 +1060,11 @@ async function cmdSsrf(url) {
   if (response) {
     printLine('[+] SSRF successful — server fetched internal resource:', 'out-ok');
     for (const line of response.split('\n')) { await delay(50); printLine(`    ${line}`, 'out-info'); }
+    const saveName = 'ssrf_response.txt';
+    target.files[saveName] = response;
+    if (!G.downloadedFiles.includes(saveName)) G.downloadedFiles.push(saveName);
+    printLine(`[+] Response saved: ${saveName}`, 'out-dim');
+    await saveState();
   } else {
     printLine('[*] Server returned no useful data for that URL.', 'out-dim');
     printLine('[*] Try: http://localhost/admin  or  http://169.254.169.254/latest/meta-data', 'out-dim');
@@ -1047,6 +1084,11 @@ async function cmdLfi(path) {
   if (content) {
     printLine(`[+] LFI confirmed — reading: ${path}`, 'out-ok');
     for (const line of content.split('\n')) { await delay(40); printLine(`    ${line}`, 'out-info'); }
+    const saveName = path.split('/').pop().replace(/[^a-z0-9._-]/gi, '_') + '.lfi';
+    target.files[saveName] = content;
+    if (!G.downloadedFiles.includes(saveName)) G.downloadedFiles.push(saveName);
+    printLine(`[+] Content saved: ${saveName}`, 'out-dim');
+    await saveState();
   } else {
     printLine('[*] Path not readable or blocked. Try:', 'out-dim');
     for (const p of Object.keys(lfiData)) { printLine(`    lfi ${p}`, 'out-dim'); }
@@ -1069,6 +1111,10 @@ async function cmdXss() {
     await delay(100); printLine(`    ${line}`, 'out-warn');
   }
   printLine('[*] Use these cookies in browser DevTools to hijack the admin session.', 'out-dim');
+  const xssSave = 'captured_session.txt';
+  target.files[xssSave] = target.xssPayload.cookieData;
+  if (!G.downloadedFiles.includes(xssSave)) G.downloadedFiles.push(xssSave);
+  await saveState();
 }
 
 async function cmdKerberoast() {
@@ -1090,7 +1136,10 @@ async function cmdKerberoast() {
     printLine(`    [${entry.user}]  SPN: ${entry.spn}`, 'out-info');
     printLine(`    ${entry.hash.slice(0, 60)}...`, 'out-dim');
   }
-  printLine('[*] Crack offline: hashcat -m 13100 hashes.txt rockyou.txt', 'out-dim');
+  const krbFile = 'kerberoast_hashes.txt';
+  target.files[krbFile] = target.kerberoastHashes.map(e => `${e.user}:${e.hash}`).join('\n');
+  printLine(`[+] Hashes saved to ${krbFile} — use "download ${krbFile}" then crack offline.`, 'out-dim');
+  printLine('[*] hashcat -m 13100 kerberoast_hashes.txt rockyou.txt', 'out-dim');
 }
 
 async function cmdAsrep() {
@@ -1112,7 +1161,10 @@ async function cmdAsrep() {
     printLine(`    [${entry.user}]`, 'out-info');
     printLine(`    ${entry.hash.slice(0, 60)}...`, 'out-dim');
   }
-  printLine('[*] Crack offline: hashcat -m 18200 asrep_hashes.txt rockyou.txt', 'out-dim');
+  const asFile = 'asrep_hashes.txt';
+  target.files[asFile] = target.asrepHashes.map(e => `${e.user}:${e.hash}`).join('\n');
+  printLine(`[+] Hashes saved to ${asFile} — use "download ${asFile}" then crack offline.`, 'out-dim');
+  printLine('[*] hashcat -m 18200 asrep_hashes.txt rockyou.txt', 'out-dim');
 }
 
 async function cmdBloodhound() {
@@ -1138,7 +1190,13 @@ async function cmdBloodhound() {
   }
   printLine('[+] Attack paths detected:', 'out-ok');
   for (const path of ad.paths) { await delay(120); printLine(`    ★ ${path}`, 'out-warn'); }
+  const adReport = [`Domain: ${ad.domain}`, `Users: ${ad.users.join(', ')}`, ...ad.paths.map(p => `Path: ${p}`)].join('\n');
+  const adSave = 'ad_report.txt';
+  target.files[adSave] = adReport;
+  if (!G.downloadedFiles.includes(adSave)) G.downloadedFiles.push(adSave);
+  await saveState();
   if (hasExtended) printLine('[*] GPO abuse and LDAP ACL misconfigurations saved to report.', 'out-dim');
+  printLine(`[+] AD report saved: ${adSave}`, 'out-dim');
 }
 
 async function cmdRelay() {
@@ -1155,6 +1213,9 @@ async function cmdRelay() {
   await delay(600);
   printLine('[+] Relay successful — authenticated as relay_svc on 172.20.1.100', 'out-ok');
   printLine('[*] Network position gained without cracking any passwords.', 'out-dim');
+  const relayIp = G.connected?.ip ?? '172.20.1.100';
+  if (!G.relayedHosts.includes(relayIp)) G.relayedHosts.push(relayIp);
+  await saveState();
 }
 
 async function cmdInspect(filename) {
@@ -1170,6 +1231,11 @@ async function cmdInspect(filename) {
   if (hits.length) {
     printLine(`[+] ${hits.length} interesting string(s) found:`, 'out-ok');
     for (const h of hits.slice(0, 8)) { await delay(60); printLine(`    ${h.trim().slice(0, 100)}`, 'out-warn'); }
+    const saveName = `inspect_${filename}.txt`;
+    target.files[saveName] = hits.join('\n');
+    if (!G.downloadedFiles.includes(saveName)) G.downloadedFiles.push(saveName);
+    await saveState();
+    printLine(`[+] Findings saved: ${saveName}`, 'out-dim');
   } else {
     printLine('[-] No hardcoded secrets or credentials detected in this file.', 'out-dim');
   }
@@ -1198,6 +1264,18 @@ async function cmdLogs() {
     }
   }
   addTrace(5);
+  const allSuspicious = logFiles.flatMap(lf =>
+    (files[lf] ?? '').split('\n').filter(l =>
+      l.toLowerCase().includes('fail') || l.toLowerCase().includes('185.220') || l.toLowerCase().includes('unknown')
+    )
+  );
+  if (allSuspicious.length) {
+    const reportSave = 'anomaly_report.txt';
+    target.files[reportSave] = allSuspicious.join('\n');
+    if (!G.downloadedFiles.includes(reportSave)) G.downloadedFiles.push(reportSave);
+    await saveState();
+    printLine(`[+] Anomaly report saved: anomaly_report.txt`, 'out-dim');
+  }
 }
 
 async function cmdGrep(pattern, filename) {
