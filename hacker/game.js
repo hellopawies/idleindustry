@@ -349,13 +349,19 @@ async function cmdScan(ip) {
   if (!target) { printLine('[!] No target in scope. ' + (G.freeMode ? 'Type "quest" to get a contract.' : ''), 'out-err'); return; }
   if (ip !== target.ip) { addTrace(10); printLine(`[!] ${ip}: Host unreachable or not in scope.`, 'out-err'); return; }
 
-  printLine(`[*] Scanning ${ip}...`, 'out-info');
-  await printProgress('[*] Port scan', 1200);
+  const hasPro = G.tools.includes('port_scanner_pro');
+  printLine(`[*] Scanning ${ip}${hasPro ? ' (deep scan)' : ''}...`, 'out-info');
+  await printProgress('[*] Port scan', hasPro ? 900 : 1200);
   printLine(`[+] Host: ${target.hostname} (${ip})`, 'out-ok');
   printEmpty();
   for (const [port, info] of Object.entries(target.ports)) {
+    if (info.hidden && !hasPro) continue;
     await delay(80);
-    printLine(`    ${String(port).padEnd(6)} [OPEN]  ${info.service.padEnd(6)}  ${info.banner}`, 'out-info');
+    const tag = info.hidden ? '[STEALTH]' : '[OPEN]   ';
+    printLine(`    ${String(port).padEnd(6)} ${tag}  ${info.service.padEnd(6)}  ${info.banner}`, 'out-info');
+  }
+  if (!hasPro && Object.values(target.ports).some(p => p.hidden)) {
+    printLine('    [*] Some stealth ports may be hidden — use port_scanner_pro.', 'out-dim');
   }
 }
 
@@ -396,13 +402,18 @@ async function cmdCrack() {
   const portInfo = getActiveTarget()?.ports[G.connected.port];
   if (!portInfo?.crackable) { addTrace(15); printLine('[!] This service has hardened auth — tool insufficient.', 'out-err'); return; }
   if (portInfo.complexity === 'medium' && !G.tools.includes('wordlist_pro')) {
-    addTrace(10); printLine('[!] Password complexity too high for Basic Cracker. Upgrade your tools.', 'out-err'); return;
+    addTrace(10); printLine('[!] Password complexity too high for Basic Cracker. Need Wordlist Pro.', 'out-err'); return;
+  }
+  if (portInfo.complexity === 'high' && !G.tools.includes('bruteforce_v2')) {
+    addTrace(12); printLine('[!] Password complexity too high. Bruteforce v2 required.', 'out-err'); return;
   }
 
+  const duration = portInfo.complexity === 'high' ? 3500 : portInfo.complexity === 'medium' ? 2800 : 2000;
+  const label    = portInfo.complexity === 'high' ? '[*] GPU brute force' : '[*] Trying common passwords';
   printLine('[*] Initiating brute force on SSH service...', 'out-info');
-  await printProgress('[*] Trying common passwords', 2000);
+  await printProgress(label, duration);
   G.connected.authed = true;
-  addTrace(20);
+  addTrace(portInfo.complexity === 'high' ? 30 : 20);
   updateHUD(); updateSidebar();
   printLine(`[+] Password found: ${portInfo.password}`, 'out-ok');
   printLine('[+] Authentication successful. Shell access granted.', 'out-ok');
@@ -519,7 +530,8 @@ async function completeQuest(quest) {
 // ── Trace ─────────────────────────────────────────────────────
 
 function addTrace(amount) {
-  G.trace = Math.min(100, G.trace + amount);
+  const effective = G.tools.includes('proxy_basic') ? Math.round(amount * 0.65) : amount;
+  G.trace = Math.min(100, G.trace + effective);
   updateHUD();
   if (G.trace >= 100) triggerTraceBurn();
 }
