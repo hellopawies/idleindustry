@@ -10,6 +10,7 @@ function storyGetProgress() {
 function storySaveProgress(idx) {
   localStorage.setItem('drone-story-chapter', String(idx));
   if (idx >= CHAPTERS.length) localStorage.setItem('drone-story-done', '1');
+  saveCloud();
 }
 
 function storyIsDone() {

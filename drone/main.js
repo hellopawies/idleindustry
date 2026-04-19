@@ -91,6 +91,6 @@ document.getElementById('code-editor').addEventListener('input', () => {
     }, 400);
   }
 
-  setInterval(() => { if (!storyMode) saveCloud(); }, 30_000);
-  window.addEventListener('beforeunload', () => { if (!storyMode) saveCloud(); });
+  setInterval(saveCloud, 30_000);
+  window.addEventListener('beforeunload', saveCloud);
 })();
