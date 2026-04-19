@@ -393,13 +393,20 @@ async function cmdConnect(ip, portStr) {
   if (!portInfo) { addTrace(5); printLine(`[!] Port ${port} is closed or filtered.`, 'out-err'); return; }
 
   if (G.connected) await cmdDisconnect(true);
-  G.connected = { ip, port, service: portInfo.service, authed: false };
+
+  const isPersisted = G.persistedHosts.includes(ip);
+  G.connected = { ip, port, service: portInfo.service, authed: isPersisted };
   updateHUD(); updateSidebar();
 
   printLine(`[+] Connected to ${ip}:${port} (${portInfo.service})`, 'out-ok');
   printLine(`    ${portInfo.banner}`, 'out-dim');
-  if (portInfo.service === 'SSH')                                       printLine('[*] Authentication required — use "crack"', 'out-info');
-  else if (portInfo.service === 'HTTP' || portInfo.service === 'HTTPS') printLine('[*] Web service — use "inject" to probe login form', 'out-info');
+  if (isPersisted) {
+    printLine('[+] Backdoor detected — auto-authenticated via Rootkit Mk.II.', 'out-ok');
+  } else if (portInfo.service === 'SSH') {
+    printLine('[*] Authentication required — use "crack"', 'out-info');
+  } else if (portInfo.service === 'HTTP' || portInfo.service === 'HTTPS') {
+    printLine('[*] Web service — use "inject" to probe login form', 'out-info');
+  }
 }
 
 async function cmdDisconnect(silent = false) {
@@ -417,7 +424,17 @@ async function cmdCrack() {
   if (G.connected.authed)                  { printLine('[*] Already authenticated.', 'out-dim'); return; }
 
   const portInfo = getActiveTarget()?.ports[G.connected.port];
-  if (!portInfo?.crackable) { addTrace(15); printLine('[!] This service has hardened auth — tool insufficient.', 'out-err'); return; }
+  if (!portInfo?.crackable) {
+    addTrace(15);
+    if (portInfo?.cve) {
+      printLine(`[!] Brute-force blocked — this service is hardened.`, 'out-err');
+      printLine(`[*] However, a known vulnerability was detected: ${portInfo.cve}`, 'out-warn');
+      printLine(`[*] Use "exploit ${portInfo.cve}" if you have ExploitDB Client.`, 'out-info');
+    } else {
+      printLine('[!] This service has hardened auth — tool insufficient.', 'out-err');
+    }
+    return;
+  }
   if (portInfo.complexity === 'medium' && !G.tools.includes('wordlist_pro')) {
     addTrace(10); printLine('[!] Password complexity too high for Basic Cracker. Need Wordlist Pro.', 'out-err'); return;
   }
@@ -743,7 +760,9 @@ async function cmdBribe(type) {
 
 function addTrace(amount) {
   let effective = amount;
-  if (G.tools.includes('proxy_basic')) {
+  if (G.tools.includes('vpn_tunnel')) {
+    effective = Math.round(effective * 0.50);
+  } else if (G.tools.includes('proxy_basic')) {
     effective = G.toolUpgrades.includes('proxy_chain')
       ? Math.round(amount * 0.40)
       : Math.round(amount * 0.65);
