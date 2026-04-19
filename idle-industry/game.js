@@ -284,8 +284,8 @@ async function saveCloud() {
 
 async function loadCloud() {
   const { data, error } = await sb.rpc("load_game", { p_user_id: currentUserId });
-  if (error) { console.warn("Cloud load failed:", error.message); return null; }
-  return data;
+  if (error) { console.warn("Cloud load failed:", error.message); return { networkError: true }; }
+  return { data };
 }
 
 function saveGame() { writeCache(); saveCloud(); }
