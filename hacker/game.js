@@ -53,7 +53,7 @@ function restoreQuest(data) {
   return { ...data, check(G) { return G.downloadedFiles.includes(file); } };
 }
 
-function saveState() {
+async function saveState() {
   const savedQuest = G.currentQuest ? {
     id:        G.currentQuest.id,
     type:      G.currentQuest.type,
@@ -66,7 +66,7 @@ function saveState() {
     target:    G.currentQuest.target,
     briefing:  G.currentQuest.briefing,
   } : null;
-  saveCloud({
+  await saveCloud({
     missionIdx:       G.missionIdx,
     missionsDone:     G.missionsDone,
     tools:            G.tools,
@@ -139,7 +139,7 @@ async function startMission(isResume = false) {
 async function enterFreeMode() {
   G.freeMode = true;
   G.currentQuest = null;
-  saveState(); updateHUD(); updateSidebar();
+  await saveState(); updateHUD(); updateSidebar();
 
   await printLines([
     { type: 'sys',  text: '[ STORY MODE COMPLETE ]' },
@@ -177,7 +177,7 @@ async function generateNewQuest() {
   G.connected       = null;
   G.trace           = 0;
   G.downloadedFiles = [];
-  saveState();
+  await saveState();
   updateHUD(); updateSidebar();
   await printLines(G.currentQuest.briefing, 50);
   printEmpty();
@@ -457,7 +457,7 @@ async function cmdDownload(filename) {
   await printProgress('[*] Transfer', 800);
   if (!G.downloadedFiles.includes(filename)) G.downloadedFiles.push(filename);
   addTrace(5);
-  saveState();
+  await saveState();
   printLine(`[+] Downloaded: ${filename}`, 'out-ok');
 }
 
@@ -483,7 +483,7 @@ async function completeMission(mission) {
   }
   G.missionsDone.push(mission.id);
   G.missionIdx++;
-  saveState();
+  await saveState();
 
   document.getElementById('mc-mission-name').textContent = mission.title;
   let rewardText = mission.reward.crypto > 0 ? `+${mission.reward.crypto} CRYPTO` : '';
@@ -504,7 +504,7 @@ async function completeQuest(quest) {
   setBusy(true);
   G.crypto += quest.reward.crypto;
   G.currentQuest = null;
-  saveState();
+  await saveState();
   await delay(400);
   await printLines([
     { type: 'ok',  text: '' },
@@ -534,7 +534,7 @@ async function triggerTraceBurn() {
   G.connected = null; G.trace = 0;
   G.notoriety = Math.min(100, G.notoriety + 5);
   G.downloadedFiles = [];
-  saveState(); updateHUD(); updateSidebar();
+  await saveState(); updateHUD(); updateSidebar();
   await delay(1000);
   printLine('[*] Connection dropped. Retry your approach.', 'out-warn');
   if (G.freeMode) printLine('[*] Type "quest" to see your current contract.', 'out-dim');
