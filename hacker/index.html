@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hacker Story — PawieGames</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<div id="intro-overlay">
+  <div class="intro-title">HACKER</div>
+  <div class="intro-text" id="intro-text"></div>
+  <button class="intro-btn" id="intro-btn">[ CONNECT ]</button>
+</div>
+
+<div id="mission-complete" hidden>
+  <div class="mc-box">
+    <div class="mc-title">▓ MISSION COMPLETE ▓</div>
+    <div class="mc-sub" id="mc-mission-name"></div>
+    <div class="mc-reward" id="mc-reward"></div>
+    <button class="mc-btn" id="mc-next-btn">NEXT MISSION →</button>
+  </div>
+</div>
+
+<div id="hud">
+  <div class="hud-left">
+    <a class="hud-back" href="../">← Hub</a>
+    <span class="hud-logo">HACKER</span>
+    <span class="hud-user" id="hud-user">ghost</span>
+    <span class="hud-mission" id="hud-mission"></span>
+  </div>
+  <div class="hud-right">
+    <div class="hud-meter">
+      <span class="hud-meter-label">TRACE</span>
+      <div class="meter-bar"><div class="meter-fill trace" id="trace-fill" style="width:0%"></div></div>
+      <span id="trace-pct">0%</span>
+    </div>
+    <div class="hud-meter">
+      <span class="hud-meter-label">HEAT</span>
+      <div class="meter-bar"><div class="meter-fill notoriety" id="notoriety-fill" style="width:0%"></div></div>
+      <span id="notoriety-pct">0%</span>
+    </div>
+  </div>
+</div>
+
+<div id="layout">
+  <div id="terminal">
+    <div id="output"></div>
+    <div id="input-row">
+      <span id="prompt">ghost@terminal:~$</span>
+      <input type="text" id="cmd-input" autocomplete="off" spellcheck="false" autofocus>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="sb-section">
+      <div class="sb-title">Mission</div>
+      <div class="sb-item" id="sb-mission-title">—</div>
+      <div class="sb-item dim" id="sb-objective">—</div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-title">Resources</div>
+      <div class="sb-item">Crypto: <span id="sb-crypto">0</span></div>
+      <div class="sb-item">Heat: <span id="sb-notoriety">0</span>%</div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-title">Tools</div>
+      <div id="sb-tools"></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-title">Connection</div>
+      <div class="sb-item" id="sb-connection">Offline</div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="cloud.js"></script>
+<script src="terminal.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
