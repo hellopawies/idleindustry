@@ -11,6 +11,10 @@
 <header>
   <a class="hdr-back" href="../">← Games</a>
   <h1>The Drone <span>Was Deployed</span></h1>
+  <div id="mode-toggle">
+    <button class="mode-btn" id="btn-story-mode">📖 Story</button>
+    <button class="mode-btn" id="btn-free-mode">🎮 Free Play</button>
+  </div>
 </header>
 <main>
   <div id="editor-panel">
@@ -39,6 +43,15 @@ while (true) {
       <div class="panel" id="inv-panel">
         <div class="panel-title">Inventory</div>
         <div id="inv-list"></div>
+      </div>
+      <div class="panel" id="story-panel" hidden>
+        <div class="panel-title"><span id="story-badge">Chapter 1 / 7</span></div>
+        <div id="story-ch-title"></div>
+        <div id="story-text"></div>
+        <div id="story-objective"></div>
+        <div id="story-concept"></div>
+        <button id="story-hint-btn" class="btn btn-muted">Show Hint</button>
+        <div id="story-hint-text" class="story-hint-box" hidden></div>
       </div>
       <div class="panel" id="research-panel">
         <div class="panel-title">Research</div>
@@ -81,6 +94,14 @@ while (true) {
     </div>
   </div>
 </main>
+<div id="story-chapter-done" hidden>
+  <div id="chapter-done-inner">
+    <div id="chapter-done-icon">⭐</div>
+    <div id="chapter-done-title">Chapter Complete!</div>
+    <div id="chapter-done-sub"></div>
+    <button id="chapter-done-next" class="btn btn-run">Next Chapter →</button>
+  </div>
+</div>
 <div id="tut-overlay">
   <div id="tut-spotlight"></div>
   <div id="tut-modal">

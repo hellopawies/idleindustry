@@ -1,3 +1,6 @@
+// ── Post-run hook (used by story mode) ───────────────────────
+let _afterRunHook = null;
+
 // ── Timing helpers ───────────────────────────────────────────
 
 function delay(ms) {
@@ -105,4 +108,5 @@ async function runCode() {
   G.running = false; G.stop = false;
   document.getElementById('btn-run').disabled = false;
   document.getElementById('btn-stop').disabled = true;
+  if (typeof _afterRunHook === 'function') _afterRunHook();
 }

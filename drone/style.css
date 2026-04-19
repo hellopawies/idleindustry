@@ -64,6 +64,32 @@ select { background: var(--surface2); color: var(--text); border: 1px solid #3a3
   #game-panel { flex-direction: column; }
 }
 
+/* Mode toggle */
+#mode-toggle { display: flex; gap: .3rem; margin-left: auto; }
+.mode-btn { background: var(--surface2); color: var(--muted); border: 1px solid transparent; border-radius: 7px; padding: .3rem .75rem; font-size: .78rem; font-weight: 600; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+.mode-btn:hover { color: var(--text); border-color: var(--accent); }
+.mode-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Story panel */
+#story-panel { overflow-y: auto; max-height: 340px; display: flex; flex-direction: column; gap: .55rem; }
+#story-ch-title { font-size: .95rem; font-weight: 700; color: var(--accent-hover); }
+#story-text { font-size: .8rem; color: var(--muted); line-height: 1.65; }
+#story-text b { color: var(--text); }
+#story-text code { font-family: monospace; background: var(--surface2); padding: .1em .35em; border-radius: 4px; color: #a8e6b8; font-size: .85em; }
+#story-objective { font-size: .82rem; line-height: 1.5; padding: .5rem .7rem; background: rgba(108,99,255,.12); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; }
+#story-concept { font-size: .72rem; color: var(--accent); font-weight: 600; }
+#story-hint-btn { align-self: flex-start; font-size: .75rem; padding: .28rem .65rem; }
+.story-hint-box { font-family: monospace; font-size: .78rem; color: #a8e6b8; background: #09090e; border-radius: 6px; padding: .5rem .75rem; white-space: pre-wrap; word-break: break-word; }
+
+/* Chapter complete overlay */
+#story-chapter-done { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 8000; display: flex; align-items: center; justify-content: center; }
+#story-chapter-done[hidden] { display: none; }
+#chapter-done-inner { background: var(--surface); border: 1px solid var(--accent); border-radius: 16px; padding: 2.5rem 3rem; text-align: center; box-shadow: 0 24px 72px rgba(0,0,0,.7); display: flex; flex-direction: column; align-items: center; gap: .85rem; max-width: 360px; width: 90vw; }
+#chapter-done-icon { font-size: 3rem; }
+#chapter-done-title { font-size: 1.4rem; font-weight: 700; }
+#chapter-done-sub { font-size: .85rem; color: var(--muted); }
+#chapter-done-next { font-size: .9rem; padding: .55rem 1.4rem; margin-top: .4rem; }
+
 /* Tutorial */
 #tut-overlay { display: none; position: fixed; inset: 0; z-index: 9000; }
 #tut-overlay.on { display: block; }
