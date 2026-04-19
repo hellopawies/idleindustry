@@ -6,6 +6,8 @@ const G = {
   crypto:          0,
   notoriety:       0,
   freeMode:        false,
+  wipedHosts:      [],
+  persistedHosts:  [],
 
   // Session-only (not saved)
   connected:       null,
@@ -45,6 +47,8 @@ function applyPayload(saved) {
   G.crypto          = saved.crypto          ?? 0;
   G.notoriety       = saved.notoriety       ?? 0;
   G.freeMode        = saved.freeMode        ?? (G.missionIdx >= MISSIONS.length);
+  G.wipedHosts      = saved.wipedHosts      ?? [];
+  G.persistedHosts  = saved.persistedHosts  ?? [];
   G.trace           = saved.trace           ?? 0;
   G.downloadedFiles = saved.downloadedFiles ?? [];
   if (saved.savedQuest) G.currentQuest = restoreQuest(saved.savedQuest);
@@ -76,6 +80,8 @@ async function saveState() {
     crypto:           G.crypto,
     notoriety:        G.notoriety,
     freeMode:         G.freeMode,
+    wipedHosts:       G.wipedHosts,
+    persistedHosts:   G.persistedHosts,
     trace:            G.trace,
     downloadedFiles:  G.downloadedFiles,
     savedQuest,
