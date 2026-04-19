@@ -33,7 +33,7 @@
       <div class="sync-dot" id="sync-dot" title="Synced"></div>
       <span id="username-display"></span>
       <span id="rank-badge" class="rank-badge" style="display:none"></span>
-      <button id="signout-btn" style="display:none"></button>
+      <button id="signout-btn" class="hdr-btn" style="display:none">Sign out</button>
     </div>
   </div>
 
@@ -52,6 +52,7 @@
 
   <div id="footer">
     <div id="prestige-bar">
+      <button class="footer-btn" onclick="openLeaderboard()">🏆 Leaderboard</button>
       <span id="prestige-count"></span>
       <button id="prestige-btn" onclick="confirmPrestige()" disabled title="Requires 10 Galactic Empires">
         ✨ Prestige

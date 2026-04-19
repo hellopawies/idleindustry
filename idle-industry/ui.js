@@ -6,6 +6,7 @@ function showScreen(id) {
 }
 function showGame(username) {
   document.getElementById("username-display").textContent = username;
+  document.getElementById("signout-btn").style.display = "";
   showScreen("game-screen");
   updateEventBanner();
 }

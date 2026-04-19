@@ -219,8 +219,14 @@ body {
 }
 
 #prestige-bar {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
+  display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
 }
+.footer-btn {
+  background: var(--surface2); color: var(--text); border: 1px solid #3a3a5e;
+  border-radius: 9px; padding: 8px 16px; font-size: 0.85rem; font-weight: 600;
+  cursor: pointer; transition: border-color 0.15s;
+}
+.footer-btn:hover { border-color: var(--accent); }
 #prestige-count { font-size: 0.78rem; color: var(--yellow); font-weight: 600; }
 #prestige-btn {
   background: linear-gradient(135deg, #6c63ff, #c084fc);
